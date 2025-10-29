@@ -1,0 +1,28 @@
+<script setup lang="ts">
+import { useCharacterStore } from "@/stores/character";
+import Item from "@/components/Item.vue";
+import { ItemKind } from "@/types";
+const { character } = useCharacterStore();
+function newItem() {
+  character.items.push({
+    name: "",
+    kind: ItemKind.OTHER,
+    effects: [],
+  });
+}
+function deleteItem(itemIdx: number) {
+  character.items.splice(itemIdx, 1);
+}
+</script>
+<template>
+  <div class="flex flex-col gap-1">
+    <Item v-for="(item, idx) in character.items" :item="item" @delete="deleteItem(idx)" />
+    <div
+      class="btn btn-ghost w-full text-gray-400 border-dashed border-gray-400"
+      @click="newItem()"
+    >
+      Add a new item...
+    </div>
+  </div>
+</template>
+<style scoped></style>
