@@ -16,6 +16,9 @@ export type SaveT = (typeof Save)[keyof typeof Save];
 export interface CharacterSheet {
   schemaVersion: "v1";
   name: string;
+  level: number;
+  baseHitpoints: number;
+  hitpointEvents: number[];
   abilities: Record<AbilityT, number>;
   baseAttackBonus: number;
   baseSaves: Record<SaveT, number>;
@@ -34,8 +37,8 @@ export interface ItemBase {
 }
 export interface Weapon extends ItemBase {
   kind: ItemKind.WEAPON;
-  ranged?: boolean;
   dice: string;
+  ranged?: boolean;
   strMod: number;
 }
 export interface Armor extends ItemBase {
@@ -54,6 +57,7 @@ export interface Effect {
   permanent?: boolean;
 }
 export const NumericEffectTarget = {
+  HP: "hp",
   SAVES: "saves",
   ATTACK: "attack",
   DAMAGE: "damage",
@@ -86,3 +90,10 @@ export interface TextEffectDetails extends BaseEffectDetails {
   value: string;
 }
 export type EffectDetails = NumericEffectDetails | TextEffectDetails;
+export interface Attack {
+  name: string;
+  attack: number;
+  damage: number;
+  dice: string;
+  extraDice: string;
+}

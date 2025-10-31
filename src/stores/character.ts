@@ -4,27 +4,35 @@ import {
   ItemKind,
   NumericEffectTarget,
   Save,
+  TextEffectTarget,
   type AbilityT,
+  type Attack,
   type CharacterSheet,
+  type EffectDetails,
   type NumericEffectDetails,
   type SaveT,
+  type TextEffectDetails,
+  type Weapon,
 } from "@/types";
 
 const character: CharacterSheet = {
   schemaVersion: "v1",
   name: "MyHero",
+  level: 3,
+  baseHitpoints: 12 + 7 + 1 + 1 + 1,
   abilities: {
     str: 15,
-    dex: 14,
-    con: 13,
-    int: 12,
-    wis: 11,
-    cha: 10,
+    dex: 13,
+    con: 16,
+    int: 10,
+    wis: 14,
+    cha: 9,
   },
-  baseAttackBonus: 1,
+  hitpointEvents: [-12],
+  baseAttackBonus: 3,
   baseSaves: {
-    fort: 2,
-    reflex: 2,
+    fort: 5,
+    reflex: 0,
     will: 0,
   },
   items: [
@@ -46,24 +54,20 @@ const character: CharacterSheet = {
       ],
     },
     {
-      name: "Belt of Con +2",
-      kind: ItemKind.OTHER,
+      name: "Masterwork Great Sword",
+      kind: ItemKind.WEAPON,
+      tags: ["greatsword", "two-handed sword"],
+      dice: "2d6 (S)",
+      strMod: 1.5,
       effects: [
+        {
+          target: TextEffectTarget.DAMAGE_DIE,
+          value: "2d6",
+        },
         {
           effectType: "enhancement",
-          target: Ability.CON,
-          modifier: 2,
-        },
-      ],
-    },
-    {
-      name: "thisisaverylongwordthatoverflows",
-      kind: ItemKind.OTHER,
-      effects: [
-        {
-          effectType: "unnamed",
-          target: Ability.CON,
-          modifier: 0,
+          target: NumericEffectTarget.ATTACK,
+          modifier: 1,
         },
       ],
     },
@@ -72,17 +76,17 @@ const character: CharacterSheet = {
 function scoreToMod(score: number) {
   return Math.floor((score - 10) / 2);
 }
-
+function getEffectsForTarget(target: EffectDetails["target"], character: CharacterSheet) {
+  return character.items
+    .map((item) => item.effects)
+    .flat()
+    .filter((effect) => effect.target === target);
+}
+function getEffectModifier(effects: NumericEffectDetails[]) {
+  return effects.reduce((total, effect) => effect.modifier + total, 0);
+}
 function getTotalEffectModifier(target: NumericEffectDetails["target"], character: CharacterSheet) {
-  let score = 0;
-  for (const item of character.items) {
-    for (const effect of item.effects) {
-      if (effect.target === target) {
-        score += (effect as NumericEffectDetails).modifier;
-      }
-    }
-  }
-  return score;
+  return getEffectModifier(getEffectsForTarget(target, character) as NumericEffectDetails[]);
 }
 
 function getAbilityStats(ability: AbilityT, character: CharacterSheet) {
@@ -116,8 +120,26 @@ export const useCharacterStore = defineStore("character", {
     updateBaseSave(save: SaveT, newScore: number | string) {
       this.character.baseSaves[save] = typeof newScore == "string" ? parseInt(newScore) : newScore;
     },
+    resetHitpoints() {
+      this.character.hitpointEvents?.splice(0);
+    },
   },
   getters: {
+    hitpoints(state): { min: number; max: number; current: number; events: number[] } {
+      const maxHitpoints =
+        state.character.baseHitpoints +
+        this.abilities.con.mod * state.character.level +
+        getTotalEffectModifier("hp", state.character);
+      return {
+        max: maxHitpoints,
+        min: -this.abilities.con.score,
+        current: (state.character.hitpointEvents ?? []).reduce(
+          (total, current) => total + current,
+          maxHitpoints,
+        ),
+        events: state.character.hitpointEvents,
+      };
+    },
     abilities(state): Record<AbilityT, { base: number; score: number; mod: number }> {
       return {
         str: getAbilityStats(Ability.STR, state.character),
@@ -144,6 +166,26 @@ export const useCharacterStore = defineStore("character", {
         touch: 10 + overallMod + this.abilities.dex.mod + touchMod,
         flatfooted: 10 + overallMod + armorMod,
       };
+    },
+    attacks(state): Attack[] {
+      return state.character.items
+        .filter((item): item is Weapon => item.kind === ItemKind.WEAPON)
+        .map((wpn: Weapon) => {
+          return {
+            name: wpn.name,
+            attack:
+              state.character.baseAttackBonus +
+              (wpn.ranged ? this.abilities.dex.mod : this.abilities.str.mod) +
+              getTotalEffectModifier("attack", state.character),
+            dice: wpn.dice,
+            damage:
+              this.abilities.str.mod * wpn.strMod +
+              getTotalEffectModifier("damage", state.character),
+            extraDice: (getEffectsForTarget("damageDie", state.character) as TextEffectDetails[])
+              .map((e) => e.value)
+              .join(" + "),
+          };
+        });
     },
   },
 });

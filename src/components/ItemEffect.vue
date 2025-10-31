@@ -72,7 +72,7 @@ function confirmDelete() {
       </template>
       <input
         v-else-if="hasOwnProperty(textTargets, effect.target)"
-        class="input input-xs"
+        class="input input-xs text-xs"
         v-model="(effect as TextEffectDetails).value"
       />
       <button
@@ -80,6 +80,7 @@ function confirmDelete() {
         :class="deleting && 'btn-error'"
         @click="confirmDelete()"
         @blur="deleting = false"
+        @mouseleave="deleting = false"
       >
         <i class="fas fa-trash text-center w-8" />
       </button>
@@ -91,11 +92,9 @@ function confirmDelete() {
         <div>{{ signedInt(effect.modifier) }}</div>
         <div class="text-gray-400">({{ effect.effectType || "-" }})</div>
       </template>
-      <input
-        v-else-if="hasOwnProperty(textTargets, effect.target)"
-        class="input input-xs"
-        v-model="(effect as TextEffectDetails).value"
-      />
+      <div v-else-if="hasOwnProperty(textTargets, effect.target)">
+        {{ (effect as TextEffectDetails).value }}
+      </div>
     </template>
   </div>
 </template>
