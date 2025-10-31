@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { EffectKind, type Effect } from "../types.ts";
-import ItemEffect from "./ItemEffect.vue";
+import EffectDetails from "./EffectDetails.vue";
 import Card from "./Card.vue";
 
 const editing = defineModel<boolean>("editing", { default: false });
@@ -108,7 +108,7 @@ function addNewTag() {
         <slot></slot>
       </div>
       <template v-for="(_, i) in effect.details">
-        <ItemEffect v-model="effect.details[i]!" :editing="editing" @delete="deleteEffect(i)" />
+        <EffectDetails v-model="effect.details[i]!" :editing="editing" @delete="deleteEffect(i)" />
       </template>
       <div
         v-if="editing"

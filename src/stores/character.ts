@@ -41,6 +41,7 @@ const character: CharacterSheet = {
       name: "+1 Breastplate",
       kind: EffectKind.ARMOR,
       weightClass: "medium",
+      active: true,
       details: [
         {
           effectType: "armor",
@@ -60,6 +61,7 @@ const character: CharacterSheet = {
       tags: ["greatsword", "two-handed sword"],
       dice: "2d6 (S)",
       strMod: 1.5,
+      active: true,
       details: [
         {
           target: TextEffectTarget.DAMAGE_DIE,
@@ -77,6 +79,7 @@ const character: CharacterSheet = {
       kind: EffectKind.WEAPON,
       dice: "1d4 (S)",
       strMod: 1,
+      active: true,
       details: [
         {
           effectType: "enhancement",
@@ -253,6 +256,7 @@ export const useCharacterStore = defineStore("character", {
     attacks(state): Attack[] {
       return state.character.items
         .filter((item): item is Weapon => item.kind === EffectKind.WEAPON)
+        .filter((item) => item.active)
         .map((wpn: Weapon) => {
           const effects = [
             wpn,

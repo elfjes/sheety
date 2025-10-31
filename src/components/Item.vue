@@ -25,8 +25,10 @@ watchEffect(() => {
   <Effect
     v-model:editing="editing"
     :effect="item"
+    @delete="emit('delete')"
     @update:effect="(e) => emit('update:item', e as Item)"
     :allowed-kinds="[EffectKind.WEAPON, EffectKind.ARMOR, EffectKind.OTHER_ITEM]"
+    toggle
   >
     <div
       v-if="item.kind === EffectKind.WEAPON"

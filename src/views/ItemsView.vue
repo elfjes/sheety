@@ -8,6 +8,7 @@ function newItem() {
     name: "",
     kind: EffectKind.OTHER_ITEM,
     details: [],
+    active: true,
   });
 }
 function deleteItem(itemIdx: number) {
