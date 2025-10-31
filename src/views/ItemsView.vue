@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { useCharacterStore } from "@/stores/character";
 import Item from "@/components/Item.vue";
-import { ItemKind } from "@/types";
+import { EffectKind } from "@/types";
 const { character } = useCharacterStore();
 function newItem() {
   character.items.push({
     name: "",
-    kind: ItemKind.OTHER,
-    effects: [],
+    kind: EffectKind.OTHER_ITEM,
+    details: [],
   });
 }
 function deleteItem(itemIdx: number) {

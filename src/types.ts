@@ -23,39 +23,43 @@ export interface CharacterSheet {
   baseAttackBonus: number;
   baseSaves: Record<SaveT, number>;
   items: Item[];
+  temporaryEffects: Effect[];
 }
-export enum ItemKind {
+export enum EffectKind {
   WEAPON = "weapon",
   ARMOR = "armor",
-  OTHER = "other",
+  OTHER_ITEM = "other item",
+  SPELL = "spell",
+  FEAT = "feat",
+  CLASS = "class",
+  RACIAL = "racial",
 }
-export interface ItemBase {
+export interface Effect {
   name: string;
-  kind: ItemKind;
-  effects: EffectDetails[];
+  description?: string;
+  kind: EffectKind;
   tags?: string[];
+  details: EffectDetails[];
+  active?: boolean;
+}
+export interface ItemBase extends Effect {
+  name: string;
 }
 export interface Weapon extends ItemBase {
-  kind: ItemKind.WEAPON;
+  kind: EffectKind.WEAPON;
   dice: string;
   ranged?: boolean;
   strMod: number;
 }
 export interface Armor extends ItemBase {
-  kind: ItemKind.ARMOR;
+  kind: EffectKind.ARMOR;
   weightClass: "light" | "medium" | "heavy";
 }
 export interface OtherItem extends ItemBase {
-  kind: ItemKind.OTHER;
+  kind: EffectKind.OTHER_ITEM;
 }
 export type Item = Weapon | Armor | OtherItem;
 
-export interface Effect {
-  name: string;
-  description?: string;
-  details: EffectDetails[];
-  permanent?: boolean;
-}
 export const NumericEffectTarget = {
   HP: "hp",
   SAVES: "saves",

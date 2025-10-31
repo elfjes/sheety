@@ -1,13 +1,14 @@
 import { defineStore } from "pinia";
 import {
   Ability,
-  ItemKind,
+  EffectKind,
   NumericEffectTarget,
   Save,
   TextEffectTarget,
   type AbilityT,
   type Attack,
   type CharacterSheet,
+  type Effect,
   type EffectDetails,
   type NumericEffectDetails,
   type SaveT,
@@ -38,9 +39,9 @@ const character: CharacterSheet = {
   items: [
     {
       name: "+1 Breastplate",
-      kind: ItemKind.ARMOR,
+      kind: EffectKind.ARMOR,
       weightClass: "medium",
-      effects: [
+      details: [
         {
           effectType: "armor",
           target: NumericEffectTarget.ARMOR_AC,
@@ -55,11 +56,11 @@ const character: CharacterSheet = {
     },
     {
       name: "Masterwork Great Sword",
-      kind: ItemKind.WEAPON,
+      kind: EffectKind.WEAPON,
       tags: ["greatsword", "two-handed sword"],
       dice: "2d6 (S)",
       strMod: 1.5,
-      effects: [
+      details: [
         {
           target: TextEffectTarget.DAMAGE_DIE,
           value: "2d6",
@@ -71,27 +72,108 @@ const character: CharacterSheet = {
         },
       ],
     },
+    {
+      name: "+5 dagger",
+      kind: EffectKind.WEAPON,
+      dice: "1d4 (S)",
+      strMod: 1,
+      details: [
+        {
+          effectType: "enhancement",
+          target: NumericEffectTarget.DAMAGE,
+          modifier: 5,
+        },
+        {
+          effectType: "enhancement",
+          target: NumericEffectTarget.ATTACK,
+          modifier: 5,
+        },
+      ],
+    },
+  ],
+  temporaryEffects: [
+    {
+      name: "Power Attack",
+      kind: EffectKind.FEAT,
+      active: false,
+      details: [
+        {
+          target: "attack",
+          modifier: -1,
+        },
+        {
+          target: "damage",
+          modifier: 3,
+        },
+      ],
+    },
+    {
+      name: "Focus great sword",
+      kind: EffectKind.FEAT,
+      active: true,
+      details: [
+        {
+          target: "attack",
+          modifier: 1,
+        },
+      ],
+      tags: ["greatsword"],
+    },
+    {
+      name: "Rage",
+      kind: EffectKind.CLASS,
+      active: false,
+      details: [
+        {
+          target: "str",
+          modifier: 4,
+        },
+        {
+          target: "con",
+          modifier: 4,
+        },
+      ],
+    },
   ],
 };
 function scoreToMod(score: number) {
   return Math.floor((score - 10) / 2);
 }
-function getEffectsForTarget(target: EffectDetails["target"], character: CharacterSheet) {
-  return character.items
-    .map((item) => item.effects)
+function relevantEffects(
+  character: CharacterSheet,
+  filter?: (effect: Effect) => boolean,
+  matchTags?: string[],
+) {
+  return [...character.items, ...character.temporaryEffects]
+    .filter((effect) => effect.active !== false)
+    .filter(filter ?? (() => true))
+    .filter((effect) => {
+      if (!effect.tags) {
+        return true;
+      }
+      for (const tag of matchTags ?? []) {
+        if (effect.tags.includes(tag)) return true;
+      }
+      return false;
+    });
+}
+function getEffectsForTarget(target: EffectDetails["target"], effects: Effect[]) {
+  return effects
+    .map((item) => item.details)
     .flat()
     .filter((effect) => effect.target === target);
 }
 function getEffectModifier(effects: NumericEffectDetails[]) {
   return effects.reduce((total, effect) => effect.modifier + total, 0);
 }
-function getTotalEffectModifier(target: NumericEffectDetails["target"], character: CharacterSheet) {
-  return getEffectModifier(getEffectsForTarget(target, character) as NumericEffectDetails[]);
+function getTotalEffectModifier(target: NumericEffectDetails["target"], effects: Effect[]) {
+  return getEffectModifier(getEffectsForTarget(target, effects) as NumericEffectDetails[]);
 }
 
 function getAbilityStats(ability: AbilityT, character: CharacterSheet) {
-  const baseScore = character.abilities[ability]!;
-  const score = getTotalEffectModifier(ability, character) + baseScore;
+  const baseScore = character.abilities[ability];
+  const effects = relevantEffects(character);
+  const score = getTotalEffectModifier(ability, effects) + baseScore;
   return {
     base: baseScore,
     score: score,
@@ -101,7 +183,8 @@ function getAbilityStats(ability: AbilityT, character: CharacterSheet) {
 
 function getSaveStats(save: SaveT, abilityModifier: number, character: CharacterSheet) {
   const baseSave = character.baseSaves[save];
-  const score = getTotalEffectModifier(save, character) + baseSave + abilityModifier;
+  const score =
+    getTotalEffectModifier(save, relevantEffects(character)) + baseSave + abilityModifier;
   return {
     base: baseSave,
     score: score,
@@ -129,7 +212,7 @@ export const useCharacterStore = defineStore("character", {
       const maxHitpoints =
         state.character.baseHitpoints +
         this.abilities.con.mod * state.character.level +
-        getTotalEffectModifier("hp", state.character);
+        getTotalEffectModifier("hp", relevantEffects(state.character));
       return {
         max: maxHitpoints,
         min: -this.abilities.con.score,
@@ -158,9 +241,9 @@ export const useCharacterStore = defineStore("character", {
       };
     },
     ac(state): { ac: number; touch: number; flatfooted: number } {
-      const overallMod = getTotalEffectModifier("ac", state.character);
-      const touchMod = getTotalEffectModifier("touchAc", state.character);
-      const armorMod = getTotalEffectModifier("armorAc", state.character);
+      const overallMod = getTotalEffectModifier("ac", relevantEffects(state.character));
+      const touchMod = getTotalEffectModifier("touchAc", relevantEffects(state.character));
+      const armorMod = getTotalEffectModifier("armorAc", relevantEffects(state.character));
       return {
         ac: 10 + overallMod + this.abilities.dex.mod + armorMod + touchMod,
         touch: 10 + overallMod + this.abilities.dex.mod + touchMod,
@@ -169,19 +252,23 @@ export const useCharacterStore = defineStore("character", {
     },
     attacks(state): Attack[] {
       return state.character.items
-        .filter((item): item is Weapon => item.kind === ItemKind.WEAPON)
+        .filter((item): item is Weapon => item.kind === EffectKind.WEAPON)
         .map((wpn: Weapon) => {
+          const effects = [
+            wpn,
+            ...relevantEffects(state.character, (e) => e.kind !== EffectKind.WEAPON, wpn.tags),
+          ];
           return {
             name: wpn.name,
             attack:
               state.character.baseAttackBonus +
               (wpn.ranged ? this.abilities.dex.mod : this.abilities.str.mod) +
-              getTotalEffectModifier("attack", state.character),
+              getEffectModifier(getEffectsForTarget("attack", effects) as NumericEffectDetails[]),
             dice: wpn.dice,
             damage:
               this.abilities.str.mod * wpn.strMod +
-              getTotalEffectModifier("damage", state.character),
-            extraDice: (getEffectsForTarget("damageDie", state.character) as TextEffectDetails[])
+              getEffectModifier(getEffectsForTarget("damage", effects) as NumericEffectDetails[]),
+            extraDice: (getEffectsForTarget("damageDie", effects) as TextEffectDetails[])
               .map((e) => e.value)
               .join(" + "),
           };

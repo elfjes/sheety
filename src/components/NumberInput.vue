@@ -9,6 +9,7 @@ const {
 } = defineProps<{ size?: string; step?: number; btnStyle?: string }>();
 // input-xs input-sm input-lg input-xl
 // btn-xs btn-sm btn-lg btn-xl
+// text-xs text-sm text-lg text-xl
 function increment() {
   model.value += step;
 }
@@ -28,7 +29,7 @@ const additionalButtonClasses = computed(() => {
   return ["btn-" + size, btnStyle];
 });
 const additionalInputClasses = computed(() => {
-  return [inputWidth.value, "input-" + size];
+  return [inputWidth.value, "input-" + size, "text-" + size];
 });
 </script>
 <template>

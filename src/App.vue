@@ -1,4 +1,5 @@
 <script setup lang="ts">
+
 import { ref } from "vue";
 import { RouterView, RouterLink } from "vue-router";
 import { useCharacterStore } from "./stores/character";
