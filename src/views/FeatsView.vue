@@ -9,6 +9,7 @@ function newFeat() {
     kind: EffectKind.FEAT,
     details: [],
     active: true,
+    passive: true,
   });
 }
 function deleteFeat(itemIdx: number) {
@@ -22,7 +23,13 @@ function deleteFeat(itemIdx: number) {
       :effect="feat"
       @delete="deleteFeat(idx)"
       :allowed-kinds="[EffectKind.FEAT]"
-    />
+      editable
+    >
+      <label class="label text-sm">
+        <input type="checkbox" class="checkbox checkbox-xs" v-model="feat.passive" />
+        Passive
+      </label>
+    </Effect>
     <div
       class="btn btn-ghost w-full text-gray-400 border-dashed border-gray-400"
       @click="newFeat()"

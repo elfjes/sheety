@@ -58,13 +58,17 @@ function deleteEffect(itemIdx: number) {
     <h3 class="mt-2 font-bold">Attacks</h3>
     <Attack v-for="attack in attacks" :attack="attack" />
 
-    <h3 class="mt-2 font-bold">Temporary Effects</h3>
+    <h3 class="mt-2 font-bold">Abilities & Effects</h3>
     <div class="flex flex-col gap-1">
+      <template v-for="(effect, idx) in character.feats">
+        <Effect v-if="!effect.passive" :effect="effect" toggle />
+      </template>
       <Effect
         v-for="(effect, idx) in character.temporaryEffects"
         :effect="effect"
         @delete="deleteEffect(idx)"
         toggle
+        editable
       />
       <div
         class="btn btn-ghost w-full text-gray-400 border-dashed border-gray-400"

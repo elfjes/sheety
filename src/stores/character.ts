@@ -52,26 +52,21 @@ const character: CharacterSheet = {
         },
       ],
     },
-  ],
-  items: [
     {
-      name: "+2 Buckler",
-      kind: EffectKind.SHIELD,
-      weightClass: "medium",
+      name: "Focus great sword",
+      kind: EffectKind.FEAT,
       active: true,
+      passive: true,
       details: [
         {
-          effectType: "armor",
-          target: NumericEffectTarget.SHIELD_AC,
+          target: "attack",
           modifier: 1,
         },
-        {
-          effectType: "enhancement",
-          target: NumericEffectTarget.SHIELD_AC,
-          modifier: 2,
-        },
       ],
+      tags: ["greatsword"],
     },
+  ],
+  items: [
     {
       name: "+1 Breastplate",
       kind: EffectKind.ARMOR,
@@ -131,18 +126,6 @@ const character: CharacterSheet = {
   ],
   temporaryEffects: [
     {
-      name: "Focus great sword",
-      kind: EffectKind.FEAT,
-      active: true,
-      details: [
-        {
-          target: "attack",
-          modifier: 1,
-        },
-      ],
-      tags: ["greatsword"],
-    },
-    {
       name: "Rage",
       kind: EffectKind.CLASS,
       active: false,
@@ -167,7 +150,7 @@ function relevantEffects(
   filter?: (effect: Effect) => boolean,
   matchTags?: string[],
 ) {
-  return [...character.items, ...character.temporaryEffects]
+  return [...character.feats, ...character.items, ...character.temporaryEffects]
     .filter((effect) => effect.active !== false)
     .filter(filter ?? (() => true))
     .filter((effect) => {

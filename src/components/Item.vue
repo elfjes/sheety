@@ -28,6 +28,7 @@ watchEffect(() => {
     @delete="emit('delete')"
     @update:effect="(e) => emit('update:item', e as Item)"
     :allowed-kinds="[EffectKind.WEAPON, EffectKind.ARMOR, EffectKind.OTHER_ITEM]"
+    editable
     toggle
   >
     <div

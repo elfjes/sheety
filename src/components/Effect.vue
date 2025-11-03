@@ -8,10 +8,12 @@ const editing = defineModel<boolean>("editing", { default: false });
 const {
   effect,
   allowedKinds = Object.values(EffectKind),
+  editable = false,
   toggle = false,
 } = defineProps<{
   effect: Effect;
   allowedKinds?: EffectKind[];
+  editable?: boolean;
   toggle?: boolean;
 }>();
 const emit = defineEmits<{
@@ -33,6 +35,7 @@ if (allowedKinds.length === 1) {
   });
 }
 function toggleEditing() {
+  if (!editable) return;
   editing.value = !editing.value;
   if (editing) {
     open.value = true;
@@ -89,7 +92,7 @@ function addNewTag() {
           {{ effect.name }}
         </h3>
         <div class="text-gray-400">({{ effect.kind }})</div>
-        <button class="btn btn-xs ml-auto" @click="toggleEditing()">
+        <button v-if="editable" class="btn btn-xs ml-auto" @click="toggleEditing()">
           <i class="fas fa-pencil text-center w-8" />
         </button>
       </div>
@@ -117,7 +120,7 @@ function addNewTag() {
       >
         Add a new effect...
       </div>
-      <div class="flex flex-row gap-1 items-center">
+      <div class="flex flex-row gap-1 items-center flex-wrap">
         <div v-for="(tag, i) in effect.tags" class="bg-gray-200 border rounded-sm px-1 text-xs">
           {{ tag }}
           <i

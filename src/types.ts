@@ -43,6 +43,7 @@ export interface Effect {
   tags?: string[];
   details: EffectDetails[];
   active?: boolean;
+  passive?: boolean;
 }
 export interface Weapon extends Effect {
   kind: EffectKind.WEAPON;
@@ -51,7 +52,7 @@ export interface Weapon extends Effect {
   strMod: number;
 }
 export interface Armor extends Effect {
-  kind: EffectKind.ARMOR|EffectKind.SHIELD;
+  kind: EffectKind.ARMOR | EffectKind.SHIELD;
   weightClass: "light" | "medium" | "heavy";
 }
 export interface OtherItem extends Effect {
@@ -74,6 +75,7 @@ export const NumericEffectTarget = {
   SHIELD_AC: "shieldAc",
   SKILLS: "skills",
   INITIATIVE: "initiative",
+  EXTRA_ATTACk: "extraAttack",
 } as const;
 
 export const TextEffectTarget = {
