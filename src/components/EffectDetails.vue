@@ -36,6 +36,8 @@ const numericTargets: Record<NumericEffectTargetT | AbilityT | SaveT, string> = 
   skills: "skills",
   initiative: "initiative",
   hp: "HP",
+  extraAttack: "Extra attack (@)",
+  baseAttack: "Base attack",
 };
 const textTargets: Record<TextEffectTargetT, string> = {
   damageDie: "damage die",

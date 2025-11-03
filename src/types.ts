@@ -16,15 +16,21 @@ export type SaveT = (typeof Save)[keyof typeof Save];
 export interface CharacterSheet {
   schemaVersion: "v1";
   name: string;
-  level: number;
+  levels: CharacterLevel[];
   baseHitpoints: number;
   hitpointEvents: number[];
   abilities: Record<AbilityT, number>;
-  baseAttackBonus: number;
   baseSaves: Record<SaveT, number>;
   feats: Feat[];
   items: Item[];
   temporaryEffects: Effect[];
+}
+export interface CharacterLevel {
+  class: string;
+  hitpoints: number;
+  baseAttack: boolean;
+  favored_class_hp: boolean;
+  favored_class_skillpoint: boolean;
 }
 export enum EffectKind {
   WEAPON = "weapon",
@@ -75,7 +81,8 @@ export const NumericEffectTarget = {
   SHIELD_AC: "shieldAc",
   SKILLS: "skills",
   INITIATIVE: "initiative",
-  EXTRA_ATTACk: "extraAttack",
+  EXTRA_ATTACK: "extraAttack",
+  BASE_ATTACK: "baseAttack",
 } as const;
 
 export const TextEffectTarget = {
@@ -103,6 +110,7 @@ export type EffectDetails = NumericEffectDetails | TextEffectDetails;
 export interface Attack {
   name: string;
   attack: number;
+  fullAttack: number[];
   damage: number;
   dice: string;
   extraDice: string;

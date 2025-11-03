@@ -19,10 +19,32 @@ import {
 const character: CharacterSheet = {
   schemaVersion: "v1",
   name: "MyHero",
-  level: 3,
+  levels: [
+    {
+      class: "brb",
+      hitpoints: 12,
+      baseAttack: true,
+      favored_class_hp: false,
+      favored_class_skillpoint: false,
+    },
+    {
+      class: "fgt",
+      hitpoints: 7,
+      baseAttack: true,
+      favored_class_hp: true,
+      favored_class_skillpoint: false,
+    },
+    {
+      class: "fgt",
+      hitpoints: 1,
+      baseAttack: true,
+      favored_class_hp: true,
+      favored_class_skillpoint: false,
+    },
+  ],
   baseHitpoints: 12 + 7 + 1 + 1 + 1,
   abilities: {
-    str: 15,
+    str: 13,
     dex: 13,
     con: 16,
     int: 10,
@@ -30,7 +52,6 @@ const character: CharacterSheet = {
     cha: 9,
   },
   hitpointEvents: [-12],
-  baseAttackBonus: 3,
   baseSaves: {
     fort: 5,
     reflex: 0,
@@ -105,23 +126,13 @@ const character: CharacterSheet = {
       ],
     },
     {
-      name: "+5 dagger",
+      name: "Unarmed strike",
       kind: EffectKind.WEAPON,
-      dice: "1d4 (S)",
+      dice: "1d6 (B)",
       strMod: 1,
       active: true,
-      details: [
-        {
-          effectType: "enhancement",
-          target: NumericEffectTarget.DAMAGE,
-          modifier: 5,
-        },
-        {
-          effectType: "enhancement",
-          target: NumericEffectTarget.ATTACK,
-          modifier: 5,
-        },
-      ],
+      tags: ["unarmed", "flurry of blows"],
+      details: [],
     },
   ],
   temporaryEffects: [
@@ -137,6 +148,37 @@ const character: CharacterSheet = {
         {
           target: "con",
           modifier: 4,
+        },
+      ],
+    },
+    {
+      name: "Haste",
+      kind: EffectKind.SPELL,
+      active: false,
+      details: [
+        {
+          target: NumericEffectTarget.EXTRA_ATTACK,
+          modifier: 0,
+        },
+      ],
+    },
+    {
+      name: "Flurry of blows",
+      kind: EffectKind.CLASS,
+      active: true,
+      tags: ["flurry of blows"],
+      details: [
+        {
+          target: NumericEffectTarget.EXTRA_ATTACK,
+          modifier: 0,
+        },
+        {
+          target: NumericEffectTarget.BASE_ATTACK,
+          modifier: +1,
+        },
+        {
+          target: NumericEffectTarget.ATTACK,
+          modifier: -2,
         },
       ],
     },
@@ -210,6 +252,16 @@ function getSaveStats(save: SaveT, abilityModifier: number, character: Character
   };
 }
 
+function attacksFromBaseAttack(bab: number) {
+  if (bab === 0) return [0];
+  const result: number[] = [];
+  let bonus: number = bab;
+  while (bonus > 0) {
+    result.push(bonus);
+    bonus -= 5;
+  }
+  return result;
+}
 export const useCharacterStore = defineStore("character", {
   state: () => ({
     character: character,
@@ -227,10 +279,25 @@ export const useCharacterStore = defineStore("character", {
     },
   },
   getters: {
+    classLevels(state) {
+      return state.character.levels.reduce(
+        (obj, lvl) => {
+          obj[lvl.class] ??= 0;
+          obj[lvl.class]! += 1;
+
+          return obj;
+        },
+        {} as Record<string, number>,
+      );
+    },
     hitpoints(state): { min: number; max: number; current: number; events: number[] } {
+      const baseHitpoints = this.character.levels.reduce(
+        (curr, lvl) => curr + lvl.hitpoints + Number(lvl.favored_class_hp),
+        0,
+      );
       const maxHitpoints =
-        state.character.baseHitpoints +
-        this.abilities.con.mod * state.character.level +
+        baseHitpoints +
+        this.abilities.con.mod * state.character.levels.length +
         getTotalEffectModifier("hp", relevantEffects(state.character));
       return {
         max: maxHitpoints,
@@ -258,6 +325,9 @@ export const useCharacterStore = defineStore("character", {
         reflex: getSaveStats(Save.REFLEX, this.abilities.dex.mod, state.character),
         will: getSaveStats(Save.WILL, this.abilities.wis.mod, state.character),
       };
+    },
+    baseAttack(state): number {
+      return state.character.levels.reduce((curr, lvl) => Number(lvl.baseAttack) + curr, 0);
     },
     ac(state): { ac: number; touch: number; flatfooted: number } {
       const armor = relevantEffects(state.character, (e) => e.kind === EffectKind.ARMOR);
@@ -291,15 +361,26 @@ export const useCharacterStore = defineStore("character", {
             wpn,
             ...relevantEffects(state.character, (e) => e.kind !== EffectKind.WEAPON, wpn.tags),
           ];
+          const baseAttack = this.baseAttack + getTotalEffectModifier("baseAttack", effects);
+          const fullAttackBase = attacksFromBaseAttack(baseAttack);
+
+          const attackBonus =
+            (wpn.ranged ? this.abilities.dex.mod : this.abilities.str.mod) +
+            getEffectModifier(getEffectsForTarget("attack", effects) as NumericEffectDetails[]);
+          for (const effect of getEffectsForTarget(
+            "extraAttack",
+            effects,
+          ) as NumericEffectDetails[]) {
+            fullAttackBase.push(baseAttack + effect.modifier);
+          }
+          fullAttackBase.sort().reverse();
           return {
             name: wpn.name,
-            attack:
-              state.character.baseAttackBonus +
-              (wpn.ranged ? this.abilities.dex.mod : this.abilities.str.mod) +
-              getEffectModifier(getEffectsForTarget("attack", effects) as NumericEffectDetails[]),
+            attack: baseAttack + attackBonus,
+            fullAttack: fullAttackBase.map((att) => att + attackBonus),
             dice: wpn.dice,
             damage:
-              this.abilities.str.mod * wpn.strMod +
+              Math.floor(this.abilities.str.mod * wpn.strMod) +
               getEffectModifier(getEffectsForTarget("damage", effects) as NumericEffectDetails[]),
             extraDice: (getEffectsForTarget("damageDie", effects) as TextEffectDetails[])
               .map((e) => e.value)
