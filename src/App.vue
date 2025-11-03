@@ -1,17 +1,17 @@
 <script setup lang="ts">
-
 import { ref } from "vue";
 import { RouterView, RouterLink } from "vue-router";
 import { useCharacterStore } from "./stores/character";
 
-const open = ref(false)
-const store = useCharacterStore()
+const open = ref(false);
+const store = useCharacterStore();
 const menuItems = [
-  { "title": "Character", "route": "/character" },
-  { "title": "Skills & Feats", "route": "/skills-and-feats" },
-  { "title": "Items", "route": "/items" },
-  { "title": "Combat", "route": "/combat" },
-]
+  { title: "Character", route: "/character" },
+  { title: "Skills", route: "/skills" },
+  { title: "Feats", route: "/feats" },
+  { title: "Items", route: "/items" },
+  { title: "Combat", route: "/combat" },
+];
 </script>
 
 <template>
@@ -26,14 +26,13 @@ const menuItems = [
     </div>
     <div v-if="open">
       <ul class="divide-y">
-        <RouterLink v-for="item in menuItems" :to=item.route>
+        <RouterLink v-for="item in menuItems" :to="item.route">
           <li class="px-4" @click="open = false">{{ item.title }}</li>
         </RouterLink>
       </ul>
     </div>
   </header>
   <div class="p-4">
-
     <RouterView />
   </div>
 </template>

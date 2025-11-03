@@ -36,7 +36,42 @@ const character: CharacterSheet = {
     reflex: 0,
     will: 0,
   },
+  feats: [
+    {
+      name: "Power Attack",
+      kind: EffectKind.FEAT,
+      active: false,
+      details: [
+        {
+          target: "attack",
+          modifier: -1,
+        },
+        {
+          target: "damage",
+          modifier: 3,
+        },
+      ],
+    },
+  ],
   items: [
+    {
+      name: "+2 Buckler",
+      kind: EffectKind.SHIELD,
+      weightClass: "medium",
+      active: true,
+      details: [
+        {
+          effectType: "armor",
+          target: NumericEffectTarget.SHIELD_AC,
+          modifier: 1,
+        },
+        {
+          effectType: "enhancement",
+          target: NumericEffectTarget.SHIELD_AC,
+          modifier: 2,
+        },
+      ],
+    },
     {
       name: "+1 Breastplate",
       kind: EffectKind.ARMOR,
@@ -49,7 +84,7 @@ const character: CharacterSheet = {
           modifier: 5,
         },
         {
-          effectType: "armor-enhancement",
+          effectType: "enhancement",
           target: NumericEffectTarget.ARMOR_AC,
           modifier: 1,
         },
@@ -95,21 +130,6 @@ const character: CharacterSheet = {
     },
   ],
   temporaryEffects: [
-    {
-      name: "Power Attack",
-      kind: EffectKind.FEAT,
-      active: false,
-      details: [
-        {
-          target: "attack",
-          modifier: -1,
-        },
-        {
-          target: "damage",
-          modifier: 3,
-        },
-      ],
-    },
     {
       name: "Focus great sword",
       kind: EffectKind.FEAT,
@@ -167,7 +187,20 @@ function getEffectsForTarget(target: EffectDetails["target"], effects: Effect[])
     .filter((effect) => effect.target === target);
 }
 function getEffectModifier(effects: NumericEffectDetails[]) {
-  return effects.reduce((total, effect) => effect.modifier + total, 0);
+  const effectsByType: Record<string, number[]> = {};
+  let result = 0;
+  for (const eff of effects) {
+    if (!eff.effectType) {
+      result += eff.modifier;
+      continue;
+    }
+    effectsByType[eff.effectType] ??= [];
+    effectsByType[eff.effectType]!.push(eff.modifier);
+  }
+  for (const mods of Object.values(effectsByType)) {
+    result += Math.max(...mods);
+  }
+  return result;
 }
 function getTotalEffectModifier(target: NumericEffectDetails["target"], effects: Effect[]) {
   return getEffectModifier(getEffectsForTarget(target, effects) as NumericEffectDetails[]);
@@ -244,13 +277,26 @@ export const useCharacterStore = defineStore("character", {
       };
     },
     ac(state): { ac: number; touch: number; flatfooted: number } {
-      const overallMod = getTotalEffectModifier("ac", relevantEffects(state.character));
-      const touchMod = getTotalEffectModifier("touchAc", relevantEffects(state.character));
-      const armorMod = getTotalEffectModifier("armorAc", relevantEffects(state.character));
+      const armor = relevantEffects(state.character, (e) => e.kind === EffectKind.ARMOR);
+      const shield = relevantEffects(state.character, (e) => e.kind === EffectKind.SHIELD);
+      const effects = relevantEffects(
+        state.character,
+        (e) => e.kind !== EffectKind.ARMOR && e.kind !== EffectKind.SHIELD,
+      );
+
+      const overallMod = getTotalEffectModifier("ac", effects);
+      const touchMod = getTotalEffectModifier("touchAc", [
+        ...armor.slice(0, 1),
+        ...shield.slice(0, 1),
+        ...effects,
+      ]);
+      const armorMod = getTotalEffectModifier("armorAc", [...armor.slice(0, 1), ...effects]);
+      const shieldMod = getTotalEffectModifier("shieldAc", [...shield.slice(0, 1), ...effects]);
+
       return {
-        ac: 10 + overallMod + this.abilities.dex.mod + armorMod + touchMod,
+        ac: 10 + overallMod + this.abilities.dex.mod + armorMod + shieldMod + touchMod,
         touch: 10 + overallMod + this.abilities.dex.mod + touchMod,
-        flatfooted: 10 + overallMod + armorMod,
+        flatfooted: 10 + overallMod + armorMod + shieldMod,
       };
     },
     attacks(state): Attack[] {

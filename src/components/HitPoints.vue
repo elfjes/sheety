@@ -69,7 +69,7 @@ function confirmReset() {
     <div v-else>
       <div class="join">
         <button class="join-item btn" @click="newEvent(true)">
-          <i class="fas fa-triangle-exclamation text-error" />
+          <i class="fas fa-skull text-error" />
         </button>
         <button class="join-item btn" @click="newEvent(false)">
           <i class="fas fa-heart text-success" />

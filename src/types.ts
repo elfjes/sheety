@@ -22,12 +22,14 @@ export interface CharacterSheet {
   abilities: Record<AbilityT, number>;
   baseAttackBonus: number;
   baseSaves: Record<SaveT, number>;
+  feats: Feat[];
   items: Item[];
   temporaryEffects: Effect[];
 }
 export enum EffectKind {
   WEAPON = "weapon",
   ARMOR = "armor",
+  SHIELD = "shield",
   OTHER_ITEM = "other item",
   SPELL = "spell",
   FEAT = "feat",
@@ -42,23 +44,24 @@ export interface Effect {
   details: EffectDetails[];
   active?: boolean;
 }
-export interface ItemBase extends Effect {
-  name: string;
-}
-export interface Weapon extends ItemBase {
+export interface Weapon extends Effect {
   kind: EffectKind.WEAPON;
   dice: string;
   ranged?: boolean;
   strMod: number;
 }
-export interface Armor extends ItemBase {
-  kind: EffectKind.ARMOR;
+export interface Armor extends Effect {
+  kind: EffectKind.ARMOR|EffectKind.SHIELD;
   weightClass: "light" | "medium" | "heavy";
 }
-export interface OtherItem extends ItemBase {
+export interface OtherItem extends Effect {
   kind: EffectKind.OTHER_ITEM;
 }
 export type Item = Weapon | Armor | OtherItem;
+
+export interface Feat extends Effect {
+  kind: EffectKind.FEAT;
+}
 
 export const NumericEffectTarget = {
   HP: "hp",
@@ -68,6 +71,7 @@ export const NumericEffectTarget = {
   AC: "ac",
   TOUCH_AC: "touchAc",
   ARMOR_AC: "armorAc",
+  SHIELD_AC: "shieldAc",
   SKILLS: "skills",
   INITIATIVE: "initiative",
 } as const;

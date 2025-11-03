@@ -1,37 +1,44 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHistory } from "vue-router";
 
-import CharacterView from '../views/CharacterView.vue'
-import SkillsAndFeatsView from '../views/SkillsAndFeatsView.vue'
-import ItemsView from '../views/ItemsView.vue'
-import CombatView from '../views/CombatView.vue'
+import CharacterView from "../views/CharacterView.vue";
+import SkillsView from "../views/SkillsView.vue";
+import FeatsView from "../views/FeatsView.vue";
+import ItemsView from "../views/ItemsView.vue";
+import CombatView from "../views/CombatView.vue";
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     {
-      path: '/',
-      alias: '/character',
-      name: 'character',
-      component: CharacterView
+      path: "/",
+      alias: "/character",
+      name: "character",
+      component: CharacterView,
     },
     {
-      path: '/skills-and-feats',
-      name: 'skills-and-feats',
+      path: "/skills",
+      name: "skills",
 
-      component: SkillsAndFeatsView
+      component: SkillsView,
     },
     {
-      path: '/items',
-      name: 'items',
+      path: "/feats",
+      name: "feats",
 
-      component: ItemsView
+      component: FeatsView,
     },
     {
-      path: '/combat',
-      name: 'combat',
+      path: "/items",
+      name: "items",
 
-      component: CombatView
+      component: ItemsView,
+    },
+    {
+      path: "/combat",
+      name: "combat",
+
+      component: CombatView,
     },
   ],
-})
+});
 
-export default router
+export default router;
