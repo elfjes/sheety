@@ -1,6 +1,5 @@
-<script setup lang="ts">
-</script>
+<script setup lang="ts"></script>
 <template>
-  <div>hi!</div>
+  <div>Under construction...</div>
 </template>
 <style scoped></style>

@@ -1,5 +1,9 @@
-@import 'tailwindcss';
-@plugin 'daisyui';
+@import "tailwindcss";
+@plugin "daisyui" {
+  themes:
+    light --default,
+    dark --prefersdark;
+}
 :root {
   --font-size: 1rem;
   --text-base: 1rem;

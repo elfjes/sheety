@@ -17,7 +17,6 @@ export interface CharacterSheet {
   schemaVersion: "v1";
   name: string;
   levels: CharacterLevel[];
-  baseHitpoints: number;
   hitpointEvents: number[];
   abilities: Record<AbilityT, number>;
   baseSaves: Record<SaveT, number>;
@@ -114,4 +113,9 @@ export interface Attack {
   damage: number;
   dice: string;
   extraDice: string;
+}
+
+export interface Action {
+  title: string;
+  event: string;
 }

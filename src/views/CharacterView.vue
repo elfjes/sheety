@@ -42,7 +42,7 @@ function newLevel() {
   <div class="flex flex-col gap-1">
     <Card collapse v-model:open="levelsOpen">
       <template #header>
-        <h2 class="text-lg font-bold">Character ({{ lvlString }})</h2>
+        <h2 class="text-lg font-bold">Classes ({{ lvlString }})</h2>
       </template>
       <div
         class="grid grid-cols-[minmax(40px,25%)_max-content_repeat(3,_auto)_max-content] gap-1 items-center"
