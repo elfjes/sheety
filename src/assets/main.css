@@ -1,5 +1,7 @@
 @import "tailwindcss";
 @plugin "daisyui" {
+  /* see https://github.com/parcel-bundler/lightningcss/issues/968#issuecomment-3448759882 */
+  exclude: properties;
   themes:
     light --default,
     dark --prefersdark;

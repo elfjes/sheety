@@ -34,7 +34,9 @@ function close() {
     <p class="mb-1">Press Copy to export your Character Sheet:</p>
     <textarea
       ref="textarea"
-      class="textarea w-full min-h-50 pointer-events-none"
+      class="textarea w-full min-h-50"
+      onclick="this.focus();this.select()"
+      readonly
       :value="characterAsExport"
     />
     <template #buttons>

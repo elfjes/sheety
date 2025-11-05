@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref, watchEffect } from "vue";
 import { EffectKind, type Item } from "../types.ts";
-import ItemEffect from "./ItemEffect.vue";
 import Card from "./Card.vue";
 import Effect from "./Effect.vue";
 import NumberInput from "./NumberInput.vue";

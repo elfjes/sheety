@@ -7,8 +7,15 @@ function defaultCharacter(): CharacterSheet {
   return {
     schemaVersion: "v1",
     name: "TestHero",
-    level: 1,
-    baseHitpoints: 10,
+    levels: [
+      {
+        class: "fighter",
+        hitpoints: 10,
+        baseAttack: true,
+        favored_class_hp: true,
+        favored_class_skillpoint: false,
+      },
+    ],
     abilities: {
       str: 10,
       dex: 10,
@@ -18,7 +25,6 @@ function defaultCharacter(): CharacterSheet {
       cha: 0,
     },
     hitpointEvents: [],
-    baseAttackBonus: 1,
     baseSaves: {
       fort: 0,
       reflex: 0,

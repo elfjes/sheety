@@ -10,7 +10,7 @@ import { computed, ref } from "vue";
 const store = useCharacterStore();
 const { abilities, saves, hitpoints, classLevels, character } = storeToRefs(store);
 
-const levelsOpen = ref(true);
+const levelsOpen = ref(false);
 const deleting = ref(false);
 const lvlString = computed(() =>
   Object.entries(classLevels.value)
