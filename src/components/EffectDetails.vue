@@ -11,7 +11,7 @@ import type {
 import NumberInput from "./NumberInput.vue";
 import { hasOwnProperty, signedInt } from "@/utils";
 import { ref } from "vue";
-
+import { effectTypes } from "@/constants";
 const effect = defineModel<EffectDetails>({ required: true });
 const { editing = false } = defineProps<{ editing: boolean }>();
 const emit = defineEmits(["delete"]);
@@ -44,7 +44,6 @@ const textTargets: Record<TextEffectTargetT, string> = {
 };
 const allTargets = { ...numericTargets, ...textTargets };
 
-const effectTypes = ["", "enhancement", "armor", "shield", "deflection"];
 function confirmDelete() {
   if (deleting.value) {
     emit("delete");
