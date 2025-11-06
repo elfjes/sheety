@@ -13,7 +13,7 @@ function newFeat() {
   });
 }
 function deleteFeat(itemIdx: number) {
-  character.items.splice(itemIdx, 1);
+  character.feats.splice(itemIdx, 1);
 }
 </script>
 <template>
@@ -22,7 +22,7 @@ function deleteFeat(itemIdx: number) {
       v-for="(feat, idx) in character.feats"
       :effect="feat"
       @delete="deleteFeat(idx)"
-      :allowed-kinds="[EffectKind.FEAT]"
+      :allowed-kinds="[EffectKind.FEAT, EffectKind.CLASS, EffectKind.RACIAL]"
       editable
     >
       <label class="label text-sm">

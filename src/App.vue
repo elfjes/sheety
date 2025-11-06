@@ -14,7 +14,7 @@ const store = useCharacterStore();
 const navItems = [
   { title: "Character", route: "/character" },
   { title: "Skills", route: "/skills" },
-  { title: "Feats", route: "/feats" },
+  { title: "Abilities", route: "/abilities" },
   { title: "Items", route: "/items" },
   { title: "Combat", route: "/combat" },
 ];

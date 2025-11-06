@@ -80,7 +80,6 @@ function deleteEffect(itemIdx: number) {
         Add a new effect...
       </div>
     </div>
-    <h3 class="mt-2 font-bold">Feats</h3>
   </div>
 </template>
 <style scoped></style>

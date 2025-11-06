@@ -2,7 +2,7 @@ import { createRouter, createWebHistory } from "vue-router";
 
 import CharacterView from "../views/CharacterView.vue";
 import SkillsView from "../views/SkillsView.vue";
-import FeatsView from "../views/FeatsView.vue";
+import AbilitiesView from "../views/AbilitiesView.vue";
 import ItemsView from "../views/ItemsView.vue";
 import CombatView from "../views/CombatView.vue";
 const router = createRouter({
@@ -21,10 +21,10 @@ const router = createRouter({
       component: SkillsView,
     },
     {
-      path: "/feats",
-      name: "feats",
+      path: "/abilities",
+      name: "abilities",
 
-      component: FeatsView,
+      component: AbilitiesView,
     },
     {
       path: "/items",
