@@ -5,7 +5,7 @@ import { EffectKind, type CharacterSheet } from "@/types";
 
 function defaultCharacter(): CharacterSheet {
   return {
-    schemaVersion: "v1",
+    schemaVersion: "v2",
     name: "TestHero",
     levels: [
       {
@@ -16,7 +16,7 @@ function defaultCharacter(): CharacterSheet {
         favored_class_skillpoint: false,
       },
     ],
-    abilities: {
+    abilityScores: {
       str: 10,
       dex: 10,
       con: 10,
@@ -30,7 +30,7 @@ function defaultCharacter(): CharacterSheet {
       reflex: 0,
       will: 0,
     },
-    feats: [],
+    abilities: [],
     items: [],
     temporaryEffects: [],
   };
@@ -46,7 +46,7 @@ describe("Character Store AC", () => {
   });
   test("Calculates correct AC, touch and Flatfooted ac", () => {
     const store = defaultStore();
-    store.character.abilities.dex = 12;
+    store.character.abilityScores.dex = 12;
     store.character.items.push({
       name: "Leather Armor",
       kind: EffectKind.ARMOR,

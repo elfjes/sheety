@@ -13,7 +13,7 @@ export const Save = {
   WILL: "will",
 } as const;
 export type SaveT = (typeof Save)[keyof typeof Save];
-export interface CharacterSheet {
+export interface CharacterSheetV1 {
   schemaVersion: "v1";
   name: string;
   levels: CharacterLevel[];
@@ -21,6 +21,17 @@ export interface CharacterSheet {
   abilities: Record<AbilityT, number>;
   baseSaves: Record<SaveT, number>;
   feats: Feat[];
+  items: Item[];
+  temporaryEffects: Effect[];
+}
+export interface CharacterSheet {
+  schemaVersion: "v2";
+  name: string;
+  levels: CharacterLevel[];
+  hitpointEvents: number[];
+  abilityScores: Record<AbilityT, number>;
+  abilities: Effect[];
+  baseSaves: Record<SaveT, number>;
   items: Item[];
   temporaryEffects: Effect[];
 }

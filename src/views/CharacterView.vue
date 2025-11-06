@@ -8,7 +8,7 @@ import Card from "@/components/Card.vue";
 import { computed, ref } from "vue";
 
 const store = useCharacterStore();
-const { abilities, saves, hitpoints, classLevels, character } = storeToRefs(store);
+const { abilityScores, saves, hitpoints, classLevels, character } = storeToRefs(store);
 
 const levelsOpen = ref(false);
 const deleting = ref(false);
@@ -95,23 +95,23 @@ function newLevel() {
 
     <Card>
       <template #header>
-        <h2 class="text-lg font-bold">Abilities</h2>
+        <h2 class="text-lg font-bold">abilityScores</h2>
       </template>
       <div class="flex flex-col gap-1">
         <div v-for="ability in Ability" class="flex gap-1 items-center">
           <div class="w-16 text-right">{{ ability.toUpperCase() }}:</div>
           <NumberInput
             type="number"
-            :model-value="abilities[ability].base"
+            :model-value="abilityScores[ability].base"
             @update:model-value="(val) => store.updateBaseAbilityScore(ability, val)"
           />
           <div
             class="w-8 text-right"
-            :class="abilities[ability].score !== abilities[ability].base && 'font-bold'"
+            :class="abilityScores[ability].score !== abilityScores[ability].base && 'font-bold'"
           >
-            {{ abilities[ability].score }}
+            {{ abilityScores[ability].score }}
           </div>
-          <input disabled class="w-8 text-right" :value="signedInt(abilities[ability].mod)" />
+          <input disabled class="w-8 text-right" :value="signedInt(abilityScores[ability].mod)" />
         </div>
       </div>
     </Card>

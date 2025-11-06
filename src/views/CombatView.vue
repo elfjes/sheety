@@ -63,7 +63,7 @@ function deleteEffect(itemIdx: number) {
 
     <h3 class="mt-2 font-bold">Abilities & Effects</h3>
     <div class="flex flex-col gap-1">
-      <template v-for="(effect, idx) in character.feats">
+      <template v-for="(effect, idx) in character.abilities">
         <Effect v-if="!effect.passive" :effect="effect" toggle />
       </template>
       <Effect

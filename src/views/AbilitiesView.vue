@@ -3,8 +3,8 @@ import { useCharacterStore } from "@/stores/character";
 import Effect from "@/components/Effect.vue";
 import { EffectKind } from "@/types";
 const { character } = useCharacterStore();
-function newFeat() {
-  character.feats.push({
+function newAbility() {
+  character.abilities.push({
     name: "",
     kind: EffectKind.FEAT,
     details: [],
@@ -12,29 +12,29 @@ function newFeat() {
     passive: true,
   });
 }
-function deleteFeat(itemIdx: number) {
-  character.feats.splice(itemIdx, 1);
+function deleteAbility(itemIdx: number) {
+  character.abilities.splice(itemIdx, 1);
 }
 </script>
 <template>
   <div class="flex flex-col gap-1">
     <Effect
-      v-for="(feat, idx) in character.feats"
-      :effect="feat"
-      @delete="deleteFeat(idx)"
+      v-for="(ability, idx) in character.abilities"
+      :effect="ability"
+      @delete="deleteAbility(idx)"
       :allowed-kinds="[EffectKind.FEAT, EffectKind.CLASS, EffectKind.RACIAL]"
       editable
     >
       <label class="label text-sm">
-        <input type="checkbox" class="checkbox checkbox-xs" v-model="feat.passive" />
+        <input type="checkbox" class="checkbox checkbox-xs" v-model="ability.passive" />
         Passive
       </label>
     </Effect>
     <div
       class="btn btn-ghost w-full text-gray-400 border-dashed border-gray-400"
-      @click="newFeat()"
+      @click="newAbility()"
     >
-      Add a new feat...
+      Add a new ability...
     </div>
   </div>
 </template>
