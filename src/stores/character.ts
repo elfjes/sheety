@@ -11,13 +11,14 @@ import {
   type Effect,
   type EffectDetails,
   type NumericEffectDetails,
+  type SavesStats,
   type SaveT,
   type TextEffectDetails,
   type Weapon,
 } from "@/types";
 
 import { computed, ref, watch } from "vue";
-import { b64decode, b64encode } from "@/utils";
+import { b64decode, b64encode, hasOwnProperty } from "@/utils";
 const LOCAL_STORAGE_KEY = "character";
 
 function saveToLocalStorage(character: CharacterSheet) {
@@ -95,21 +96,74 @@ function getEffectsForTarget(target: EffectDetails["target"], effects: Effect[])
     .flat()
     .filter((effect) => effect.target === target);
 }
-function getEffectModifier(effects: NumericEffectDetails[]) {
+function getModifiersByEffectType(effects: NumericEffectDetails[]) {
   const effectsByType: Record<string, number[]> = {};
-  let result = 0;
   for (const eff of effects) {
-    if (!eff.effectType) {
-      result += eff.modifier;
+    const key = eff.effectType || "";
+    effectsByType[key] ??= [];
+    effectsByType[key]!.push(eff.modifier);
+  }
+  return effectsByType;
+}
+function getEffectModifier(effects: NumericEffectDetails[]) {
+  const effectsByType = getModifiersByEffectType(effects.filter((e) => !e.conditional));
+  return Object.entries(effectsByType).reduce((result, [type, mods]) => {
+    if (type === "") {
+      return result + mods.reduce((v, n) => v + n, 0);
+    }
+    return result + Math.max(...mods);
+  }, 0);
+}
+
+function getConditionalModifiers(target: NumericEffectDetails["target"], effects: Effect[]) {
+  const effectDetails = getEffectsForTarget(target, effects) as NumericEffectDetails[];
+  const modifiers: Record<string, Record<string, number>> = {};
+  // here we filter for named bonuses, because only those do not stack
+  for (const eff of effectDetails) {
+    const effectTypeKey = eff.effectType || "";
+    const conditionalKey = eff.conditional || "";
+    modifiers[conditionalKey] ??= {};
+    modifiers[conditionalKey][effectTypeKey] ??= 0;
+    if (!effectTypeKey) {
+      modifiers[conditionalKey][effectTypeKey] += eff.modifier;
       continue;
     }
-    effectsByType[eff.effectType] ??= [];
-    effectsByType[eff.effectType]!.push(eff.modifier);
+    modifiers[conditionalKey][effectTypeKey] = Math.max(
+      modifiers[conditionalKey][effectTypeKey],
+      eff.modifier,
+    );
   }
-  for (const mods of Object.values(effectsByType)) {
-    result += Math.max(...mods);
+  const alwaysModifiers = modifiers[""] || {};
+  const conditionals: Record<string, Record<string, number>> = {};
+  for (const [conditional, mods] of Object.entries(modifiers).filter(([c, _]) => !!c)) {
+    for (const [effectType, modifier] of Object.entries(mods)) {
+      if (!effectType) {
+        conditionals[conditional] ??= {};
+        conditionals[conditional][""] = modifier;
+        continue;
+      }
+      let effectiveValue = modifier;
+      if (hasOwnProperty(alwaysModifiers, effectType)) {
+        if (alwaysModifiers[effectType]! >= modifier) {
+          continue;
+        }
+        effectiveValue -= alwaysModifiers[effectType]!;
+      }
+      conditionals[conditional] ??= {};
+      conditionals[conditional][effectType] ??= 0;
+      conditionals[conditional][effectType] = Math.max(
+        conditionals[conditional][effectType],
+        effectiveValue,
+      );
+    }
   }
-  return result;
+  return Object.entries(conditionals).reduce(
+    (result, [conditional, mods]) => {
+      result[conditional] = Object.values(mods).reduce((a, b) => a + b, 0);
+      return result;
+    },
+    {} as Record<string, number>,
+  );
 }
 function getTotalEffectModifier(target: NumericEffectDetails["target"], effects: Effect[]) {
   return getEffectModifier(getEffectsForTarget(target, effects) as NumericEffectDetails[]);
@@ -128,8 +182,13 @@ function getAbilityStats(ability: AbilityT, character: CharacterSheet) {
 
 function getSaveStats(save: SaveT, abilityModifier: number, character: CharacterSheet) {
   const baseSave = character.baseSaves[save];
+  const effects = relevantEffects(character);
+
   const score =
-    getTotalEffectModifier(save, relevantEffects(character)) + baseSave + abilityModifier;
+    getTotalEffectModifier(save, effects) +
+    getTotalEffectModifier("saves", effects) +
+    baseSave +
+    abilityModifier;
   return {
     base: baseSave,
     score: score,
@@ -220,39 +279,47 @@ export const useCharacterStore = defineStore("character", () => {
       cha: getAbilityStats(Ability.CHA, character.value),
     };
   });
-  const saves = computed((): Record<SaveT, { base: number; score: number }> => {
+  const saves = computed((): SavesStats => {
     return {
       fort: getSaveStats(Save.FORT, abilities.value.con.mod, character.value),
       reflex: getSaveStats(Save.REFLEX, abilities.value.dex.mod, character.value),
       will: getSaveStats(Save.WILL, abilities.value.wis.mod, character.value),
+      conditional: getConditionalModifiers("saves", relevantEffects(character.value)),
     };
   });
   const baseAttack = computed((): number => {
     return character.value.levels.reduce((curr, lvl) => Number(lvl.baseAttack) + curr, 0);
   });
-  const ac = computed((): { ac: number; touch: number; flatfooted: number } => {
-    const armor = relevantEffects(character.value, (e) => e.kind === EffectKind.ARMOR);
-    const shield = relevantEffects(character.value, (e) => e.kind === EffectKind.SHIELD);
-    const effects = relevantEffects(
-      character.value,
-      (e) => e.kind !== EffectKind.ARMOR && e.kind !== EffectKind.SHIELD,
-    );
+  const ac = computed(
+    (): { ac: number; touch: number; flatfooted: number; conditional: Record<string, number> } => {
+      const armor = relevantEffects(character.value, (e) => e.kind === EffectKind.ARMOR);
+      const shield = relevantEffects(character.value, (e) => e.kind === EffectKind.SHIELD);
+      const effects = relevantEffects(
+        character.value,
+        (e) => e.kind !== EffectKind.ARMOR && e.kind !== EffectKind.SHIELD,
+      );
 
-    const overallMod = getTotalEffectModifier("ac", effects);
-    const touchMod = getTotalEffectModifier("touchAc", [
-      ...armor.slice(0, 1),
-      ...shield.slice(0, 1),
-      ...effects,
-    ]);
-    const armorMod = getTotalEffectModifier("armorAc", [...armor.slice(0, 1), ...effects]);
-    const shieldMod = getTotalEffectModifier("shieldAc", [...shield.slice(0, 1), ...effects]);
+      const overallMod = getTotalEffectModifier("ac", effects);
+      const touchMod = getTotalEffectModifier("touchAc", [
+        ...armor.slice(0, 1),
+        ...shield.slice(0, 1),
+        ...effects,
+      ]);
+      const armorMod = getTotalEffectModifier("armorAc", [...armor.slice(0, 1), ...effects]);
+      const shieldMod = getTotalEffectModifier("shieldAc", [...shield.slice(0, 1), ...effects]);
 
-    return {
-      ac: 10 + overallMod + abilities.value.dex.mod + armorMod + shieldMod + touchMod,
-      touch: 10 + overallMod + abilities.value.dex.mod + touchMod,
-      flatfooted: 10 + overallMod + armorMod + shieldMod,
-    };
-  });
+      return {
+        ac: 10 + overallMod + abilities.value.dex.mod + armorMod + shieldMod + touchMod,
+        touch: 10 + overallMod + abilities.value.dex.mod + touchMod,
+        flatfooted: 10 + overallMod + armorMod + shieldMod,
+        conditional: getConditionalModifiers("ac", [
+          ...armor.slice(0, 1),
+          ...shield.slice(0, 1),
+          ...effects,
+        ]),
+      };
+    },
+  );
   const attacks = computed((): Attack[] => {
     return character.value.items
       .filter((item): item is Weapon => item.kind === EffectKind.WEAPON)
@@ -286,6 +353,7 @@ export const useCharacterStore = defineStore("character", () => {
           extraDice: (getEffectsForTarget("damageDie", effects) as TextEffectDetails[])
             .map((e) => e.value)
             .join(" + "),
+          conditional: getConditionalModifiers("attack", effects),
         };
       });
   });

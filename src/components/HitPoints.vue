@@ -41,7 +41,15 @@ function confirmReset() {
   <Card>
     <template #header>
       <h3 class="font-bold overflow-hidden text-ellipsis flex-shrink-1">
-        Hit Points {{ hitpoints.current }} / {{ hitpointMax }}
+        Hit Points
+        <span
+          :class="{
+            'text-success': hitpoints.current > hitpoints.max,
+            'text-error': hitpoints.current < 0,
+          }"
+          >{{ hitpoints.current }}</span
+        >
+        / {{ hitpointMax }}
       </h3>
     </template>
     <div class="flex flex-col flex-wrap content-start gap-x-2 max-h-30">
@@ -73,6 +81,9 @@ function confirmReset() {
         </button>
         <button class="join-item btn" @click="newEvent(false)">
           <i class="fas fa-heart text-success" />
+        </button>
+        <button class="join-item btn" @click="hitpoints.events.pop()">
+          <i class="fas fa-arrow-up" />
         </button>
         <button
           class="join-item btn"

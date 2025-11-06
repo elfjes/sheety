@@ -97,7 +97,7 @@ function addNewTag() {
         </button>
       </div>
     </template>
-    <div class="flex flex-col gap-1">
+    <div class="flex flex-col gap-1 max-w-100">
       <div v-if="editing" class="flex flex-row flex-wrap justify-stretch gap-1">
         <label
           v-if="editing && allowedKinds.length > 1"

@@ -91,11 +91,13 @@ export type NumericEffectTargetT = (typeof NumericEffectTarget)[keyof typeof Num
 export type TextEffectTargetT = (typeof TextEffectTarget)[keyof typeof TextEffectTarget];
 export type EffectTarget = AbilityT | SaveT | NumericEffectTargetT | TextEffectTargetT;
 export interface BaseEffectDetails {
+  target: EffectTarget;
+
   // Useful for matching certain effects to certain items/weapons.
   // If not defined, matches all relevant items/weapons/armor
-  target: EffectTarget;
   tags?: string[];
   effectType?: string; // such as competence, circumstance, etc
+  conditional?: string; // Effect is only active under certain conditions (such as will save against fear, ac against giants etc)
 }
 export interface NumericEffectDetails extends BaseEffectDetails {
   target: NumericEffectTargetT | AbilityT | SaveT;
@@ -106,6 +108,7 @@ export interface TextEffectDetails extends BaseEffectDetails {
   value: string;
 }
 export type EffectDetails = NumericEffectDetails | TextEffectDetails;
+export type ConditionalModifiers = Record<string, number>;
 export interface Attack {
   name: string;
   attack: number;
@@ -113,9 +116,16 @@ export interface Attack {
   damage: number;
   dice: string;
   extraDice: string;
+  conditional: ConditionalModifiers;
 }
 
 export interface Action {
   title: string;
   event: string;
+}
+export interface SavesStats {
+  fort: { base: number; score: number };
+  reflex: { base: number; score: number };
+  will: { base: number; score: number };
+  conditional: Record<string, number>;
 }

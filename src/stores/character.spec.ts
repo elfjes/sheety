@@ -166,4 +166,155 @@ describe("Character Store AC", () => {
     });
     expect(store.ac.ac).toBe(17);
   });
+  test("Returns conditional modifiers", () => {
+    const store = defaultStore();
+    store.character.items.push({
+      name: "armor",
+      kind: EffectKind.ARMOR,
+      weightClass: "light",
+      details: [
+        {
+          conditional: "giants",
+          target: "ac",
+          modifier: 1,
+        },
+      ],
+    });
+    expect(store.ac.ac).toBe(10);
+    expect(store.ac.conditional).toEqual({
+      giants: 1,
+    });
+  });
+});
+
+describe("CharacterStore saves", () => {
+  beforeEach(() => {
+    setActivePinia(createPinia());
+  });
+  test("Returns all unnamed conditional bonuses", () => {
+    const store = defaultStore();
+    store.character.temporaryEffects.push({
+      name: "Bless",
+      kind: EffectKind.SPELL,
+      details: [
+        {
+          target: "saves",
+          modifier: 1,
+          conditional: "fear",
+        },
+        {
+          target: "saves",
+          modifier: 2,
+          conditional: "fear",
+        },
+      ],
+    });
+    expect(store.saves.conditional).toEqual({
+      fear: 3,
+    });
+  });
+  test("Returns highest named conditional bonuses", () => {
+    const store = defaultStore();
+    store.character.temporaryEffects.push({
+      name: "Bless",
+      kind: EffectKind.SPELL,
+      details: [
+        {
+          target: "saves",
+          modifier: 1,
+          conditional: "fear",
+          effectType: "resistance",
+        },
+        {
+          target: "saves",
+          modifier: 2,
+          conditional: "fear",
+          effectType: "resistance",
+        },
+      ],
+    });
+    expect(store.saves.conditional).toEqual({
+      fear: 2,
+    });
+  });
+  test("Returns only extra named conditional bonus if unconditional bonus exists", () => {
+    const store = defaultStore();
+    store.character.temporaryEffects.push({
+      name: "Bless",
+      kind: EffectKind.SPELL,
+      details: [
+        {
+          target: "saves",
+          modifier: 1,
+          effectType: "resistance",
+        },
+        {
+          target: "saves",
+          modifier: 2,
+          conditional: "fear",
+          effectType: "resistance",
+        },
+      ],
+    });
+    expect(store.saves.conditional).toEqual({
+      fear: 1,
+    });
+  });
+  test("Doesn't return conditional bonus if regular named bonus exists", () => {
+    const store = defaultStore();
+    store.character.temporaryEffects.push({
+      name: "Bless",
+      kind: EffectKind.SPELL,
+      details: [
+        {
+          target: "saves",
+          modifier: 1,
+          effectType: "resistance",
+        },
+        {
+          target: "saves",
+          modifier: 1,
+          conditional: "fear",
+          effectType: "resistance",
+        },
+      ],
+    });
+    expect(store.saves.conditional).toEqual({});
+  });
+  test("Returns from multiple sources", () => {
+    const store = defaultStore();
+    store.character.temporaryEffects.push({
+      name: "Bless",
+      kind: EffectKind.SPELL,
+      details: [
+        {
+          target: "saves",
+          modifier: 1,
+          conditional: "fear",
+          effectType: "resistance",
+        },
+        {
+          target: "saves",
+          modifier: 1,
+          conditional: "poison",
+          effectType: "resistance",
+        },
+        {
+          target: "saves",
+          modifier: 1,
+          conditional: "fear",
+        },
+        {
+          target: "saves",
+          modifier: 1,
+          conditional: "fear",
+          effectType: "morale",
+        },
+      ],
+    });
+    expect(store.saves.conditional).toEqual({
+      fear: 3,
+      poison: 1,
+    });
+  });
 });

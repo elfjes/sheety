@@ -6,6 +6,7 @@ import { storeToRefs } from "pinia";
 import { EffectKind } from "@/types";
 import Effect from "@/components/Effect.vue";
 import Card from "@/components/Card.vue";
+import { signedInt } from "@/utils";
 
 const store = useCharacterStore();
 const { character, attacks, ac, saves } = storeToRefs(store);
@@ -39,6 +40,7 @@ function deleteEffect(itemIdx: number) {
         <div>{{ ac.touch }}</div>
         <div>{{ ac.flatfooted }}</div>
       </div>
+      <div v-for="(mod, cond) in ac.conditional">{{ cond }}: {{ signedInt(mod) }}</div>
     </Card>
     <Card collapse>
       <template #header>
@@ -54,6 +56,7 @@ function deleteEffect(itemIdx: number) {
         <div>{{ saves.reflex.score }}</div>
         <div>{{ saves.will.score }}</div>
       </div>
+      <div v-for="(mod, cond) in saves.conditional">{{ cond }}: {{ signedInt(mod) }}</div>
     </Card>
     <h3 class="mt-2 font-bold">Attacks</h3>
     <Attack v-for="attack in attacks" :attack="attack" />
@@ -77,6 +80,7 @@ function deleteEffect(itemIdx: number) {
         Add a new effect...
       </div>
     </div>
+    <h3 class="mt-2 font-bold">Feats</h3>
   </div>
 </template>
 <style scoped></style>

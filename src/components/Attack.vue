@@ -27,6 +27,7 @@ const fullAttackString = computed(() => {
         <div>({{ damageString }})</div>
       </template>
     </div>
+    <div v-for="(mod, cond) in attack.conditional">{{ cond }}: {{ signedInt(mod) }}</div>
   </Card>
 </template>
 <style scoped></style>
