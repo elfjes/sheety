@@ -2,18 +2,18 @@ import { defineStore } from "pinia";
 import {
   Ability,
   EffectKind,
-  NumericEffectTarget,
   Save,
-  TextEffectTarget,
   type AbilityT,
   type Attack,
   type CharacterSheet,
   type CharacterSheetV1,
   type Effect,
-  type EffectDetails,
+  type EffectTarget,
   type NumericEffectDetails,
+  type NumericEffectTargetT,
   type SavesStats,
   type SaveT,
+  type SingleSaveStats,
   type TextEffectDetails,
   type Weapon,
 } from "@/types";
@@ -97,11 +97,14 @@ function relevantEffects(
       return false;
     });
 }
-function getEffectsForTarget(target: EffectDetails["target"], effects: Effect[]) {
+function getEffectsForTarget(target: EffectTarget | EffectTarget[], effects: Effect[]) {
+  if (!Array.isArray(target)) {
+    target = [target];
+  }
   return effects
     .map((item) => item.details)
     .flat()
-    .filter((effect) => effect.target === target);
+    .filter((effect) => target.includes(effect.target));
 }
 function getModifiersByEffectType(effects: NumericEffectDetails[]) {
   const effectsByType: Record<string, number[]> = {};
@@ -122,7 +125,10 @@ function getEffectModifier(effects: NumericEffectDetails[]) {
   }, 0);
 }
 
-function getConditionalModifiers(target: NumericEffectDetails["target"], effects: Effect[]) {
+function getConditionalModifiers(
+  target: NumericEffectTargetT | NumericEffectTargetT[],
+  effects: Effect[],
+) {
   const effectDetails = getEffectsForTarget(target, effects) as NumericEffectDetails[];
   const modifiers: Record<string, Record<string, number>> = {};
   // here we filter for named bonuses, because only those do not stack
@@ -166,13 +172,18 @@ function getConditionalModifiers(target: NumericEffectDetails["target"], effects
   }
   return Object.entries(conditionals).reduce(
     (result, [conditional, mods]) => {
-      result[conditional] = Object.values(mods).reduce((a, b) => a + b, 0);
+      const value = Object.values(mods).reduce((a, b) => a + b, 0);
+      if (value === 0) return result;
+      result[conditional] = value;
       return result;
     },
     {} as Record<string, number>,
   );
 }
-function getTotalEffectModifier(target: NumericEffectDetails["target"], effects: Effect[]) {
+function getTotalEffectModifier(
+  target: NumericEffectTargetT[] | NumericEffectTargetT,
+  effects: Effect[],
+) {
   return getEffectModifier(getEffectsForTarget(target, effects) as NumericEffectDetails[]);
 }
 
@@ -187,18 +198,19 @@ function getAbilityStats(ability: AbilityT, character: CharacterSheet) {
   };
 }
 
-function getSaveStats(save: SaveT, abilityModifier: number, character: CharacterSheet) {
+function getSaveStats(
+  save: SaveT,
+  abilityModifier: number,
+  character: CharacterSheet,
+): SingleSaveStats {
   const baseSave = character.baseSaves[save];
   const effects = relevantEffects(character);
 
-  const score =
-    getTotalEffectModifier(save, effects) +
-    getTotalEffectModifier("saves", effects) +
-    baseSave +
-    abilityModifier;
+  const score = getTotalEffectModifier([save, "saves"], effects) + baseSave + abilityModifier;
   return {
     base: baseSave,
     score: score,
+    conditional: getConditionalModifiers([save, "saves"], effects),
   };
 }
 
@@ -296,7 +308,6 @@ export const useCharacterStore = defineStore("character", () => {
       fort: getSaveStats(Save.FORT, abilityScores.value.con.mod, character.value),
       reflex: getSaveStats(Save.REFLEX, abilityScores.value.dex.mod, character.value),
       will: getSaveStats(Save.WILL, abilityScores.value.wis.mod, character.value),
-      conditional: getConditionalModifiers("saves", relevantEffects(character.value)),
     };
   });
   const baseAttack = computed((): number => {

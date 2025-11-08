@@ -51,6 +51,7 @@ export enum EffectKind {
   FEAT = "feat",
   CLASS = "class",
   RACIAL = "racial",
+  OTHER = "other",
 }
 export interface Effect {
   name: string;
@@ -98,7 +99,10 @@ export const NumericEffectTarget = {
 export const TextEffectTarget = {
   DAMAGE_DIE: "damageDie",
 } as const;
-export type NumericEffectTargetT = (typeof NumericEffectTarget)[keyof typeof NumericEffectTarget];
+export type NumericEffectTargetT =
+  | (typeof NumericEffectTarget)[keyof typeof NumericEffectTarget]
+  | AbilityT
+  | SaveT;
 export type TextEffectTargetT = (typeof TextEffectTarget)[keyof typeof TextEffectTarget];
 export type EffectTarget = AbilityT | SaveT | NumericEffectTargetT | TextEffectTargetT;
 export interface BaseEffectDetails {
@@ -111,7 +115,7 @@ export interface BaseEffectDetails {
   conditional?: string; // Effect is only active under certain conditions (such as will save against fear, ac against giants etc)
 }
 export interface NumericEffectDetails extends BaseEffectDetails {
-  target: NumericEffectTargetT | AbilityT | SaveT;
+  target: NumericEffectTargetT;
   modifier: number;
 }
 export interface TextEffectDetails extends BaseEffectDetails {
@@ -134,9 +138,9 @@ export interface Action {
   title: string;
   event: string;
 }
-export interface SavesStats {
-  fort: { base: number; score: number };
-  reflex: { base: number; score: number };
-  will: { base: number; score: number };
-  conditional: Record<string, number>;
+export interface SingleSaveStats {
+  base: number;
+  score: number;
+  conditional: ConditionalModifiers;
 }
+export type SavesStats = Record<SaveT, SingleSaveStats>;

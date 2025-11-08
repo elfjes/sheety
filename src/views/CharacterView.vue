@@ -95,7 +95,7 @@ function newLevel() {
 
     <Card>
       <template #header>
-        <h2 class="text-lg font-bold">abilityScores</h2>
+        <h2 class="text-lg font-bold">Ability Scores</h2>
       </template>
       <div class="flex flex-col gap-1">
         <div v-for="ability in Ability" class="flex gap-1 items-center">

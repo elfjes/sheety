@@ -4,6 +4,8 @@ import { computed, ref } from "vue";
 import NumberInput from "./NumberInput.vue";
 import { storeToRefs } from "pinia";
 import Card from "./Card.vue";
+import ConfirmButton from "./ConfirmButton.vue";
+
 const store = useCharacterStore();
 const { hitpoints } = storeToRefs(store);
 const hitpointMax = computed(() =>
@@ -13,7 +15,6 @@ const hitpointMax = computed(() =>
 const addingEvent = ref(false);
 const isDamageEvent = ref(false);
 const eventValue = ref(0);
-const resetting = ref(false);
 function newEvent(isDamage: boolean = false) {
   addingEvent.value = true;
   isDamageEvent.value = isDamage;
@@ -28,13 +29,8 @@ function cancelEvent() {
   addingEvent.value = false;
   eventValue.value = 0;
 }
-function confirmReset() {
-  if (!resetting.value) {
-    resetting.value = true;
-    return;
-  }
+function resetHP() {
   store.resetHitpoints();
-  resetting.value = false;
 }
 </script>
 <template>
@@ -85,15 +81,12 @@ function confirmReset() {
         <button class="join-item btn" @click="hitpoints.events.pop()">
           <i class="fas fa-arrow-up" />
         </button>
-        <button
-          class="join-item btn"
-          :class="resetting && 'btn-warning'"
-          @click="confirmReset()"
-          @mouseleave="resetting = false"
-          @blur="resetting = false"
-        >
-          <i class="fas fa-rotate-left" />
-        </button>
+        <ConfirmButton
+          class="join-item"
+          confirm-color="warning"
+          icon="fa-rotate-left"
+          @confirm="resetHP"
+        />
       </div>
     </div>
   </Card>

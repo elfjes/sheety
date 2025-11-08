@@ -92,7 +92,11 @@ function addNewTag() {
           {{ effect.name }}
         </h3>
         <div class="text-gray-400">({{ effect.kind }})</div>
-        <button v-if="editable" class="btn btn-xs ml-auto" @click="toggleEditing()">
+        <button
+          v-if="editable"
+          class="btn btn-xs btn-square btn-ghost ml-auto"
+          @click="toggleEditing()"
+        >
           <i class="fas fa-pencil text-center w-8" />
         </button>
       </div>

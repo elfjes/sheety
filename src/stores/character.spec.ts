@@ -209,7 +209,13 @@ describe("CharacterStore saves", () => {
         },
       ],
     });
-    expect(store.saves.conditional).toEqual({
+    expect(store.saves.fort.conditional).toEqual({
+      fear: 3,
+    });
+    expect(store.saves.reflex.conditional).toEqual({
+      fear: 3,
+    });
+    expect(store.saves.will.conditional).toEqual({
       fear: 3,
     });
   });
@@ -220,20 +226,20 @@ describe("CharacterStore saves", () => {
       kind: EffectKind.SPELL,
       details: [
         {
-          target: "saves",
+          target: "will",
           modifier: 1,
           conditional: "fear",
           effectType: "resistance",
         },
         {
-          target: "saves",
+          target: "will",
           modifier: 2,
           conditional: "fear",
           effectType: "resistance",
         },
       ],
     });
-    expect(store.saves.conditional).toEqual({
+    expect(store.saves.will.conditional).toEqual({
       fear: 2,
     });
   });
@@ -249,14 +255,14 @@ describe("CharacterStore saves", () => {
           effectType: "resistance",
         },
         {
-          target: "saves",
+          target: "will",
           modifier: 2,
           conditional: "fear",
           effectType: "resistance",
         },
       ],
     });
-    expect(store.saves.conditional).toEqual({
+    expect(store.saves.will.conditional).toEqual({
       fear: 1,
     });
   });
@@ -267,54 +273,39 @@ describe("CharacterStore saves", () => {
       kind: EffectKind.SPELL,
       details: [
         {
-          target: "saves",
+          target: "will",
           modifier: 1,
           effectType: "resistance",
         },
         {
-          target: "saves",
+          target: "will",
           modifier: 1,
           conditional: "fear",
           effectType: "resistance",
         },
       ],
     });
-    expect(store.saves.conditional).toEqual({});
+    expect(store.saves.will.conditional).toEqual({});
   });
-  test("Returns from multiple sources", () => {
+  test("Doesn't return conditional bonus if exactly 0", () => {
     const store = defaultStore();
     store.character.temporaryEffects.push({
       name: "Bless",
       kind: EffectKind.SPELL,
       details: [
         {
-          target: "saves",
+          target: "will",
           modifier: 1,
           conditional: "fear",
           effectType: "resistance",
         },
         {
-          target: "saves",
-          modifier: 1,
-          conditional: "poison",
-          effectType: "resistance",
-        },
-        {
-          target: "saves",
-          modifier: 1,
+          target: "will",
+          modifier: -1,
           conditional: "fear",
-        },
-        {
-          target: "saves",
-          modifier: 1,
-          conditional: "fear",
-          effectType: "morale",
         },
       ],
     });
-    expect(store.saves.conditional).toEqual({
-      fear: 3,
-      poison: 1,
-    });
+    expect(store.saves.will.conditional).toEqual({});
   });
 });

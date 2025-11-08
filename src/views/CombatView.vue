@@ -3,10 +3,11 @@ import HitPoints from "@/components/HitPoints.vue";
 import Attack from "@/components/Attack.vue";
 import { useCharacterStore } from "@/stores/character";
 import { storeToRefs } from "pinia";
-import { EffectKind } from "@/types";
+import { EffectKind, Save, type ConditionalModifiers, type SaveT } from "@/types";
 import Effect from "@/components/Effect.vue";
 import Card from "@/components/Card.vue";
 import { signedInt } from "@/utils";
+import { computed } from "vue";
 
 const store = useCharacterStore();
 const { character, attacks, ac, saves } = storeToRefs(store);
@@ -21,6 +22,25 @@ function newEffect() {
 function deleteEffect(itemIdx: number) {
   character.value.temporaryEffects.splice(itemIdx, 1);
 }
+const conditionalSaves = computed(() => {
+  const conditionalsAsArray: Record<SaveT, [string, number][]> = Object.entries(saves.value).reduce(
+    (prev, [save, values]) => {
+      prev[save as SaveT] = Object.entries(values.conditional);
+      return prev;
+    },
+    {} as Record<SaveT, [string, number][]>,
+  );
+  const maxLen = Math.max(...Object.values(conditionalsAsArray).map((v) => v.length));
+  const result: [[string, number]?, [string, number]?, [string, number]?][] = [];
+  for (let i = 0; i < maxLen; i++) {
+    result.push([
+      conditionalsAsArray[Save.FORT][i],
+      conditionalsAsArray[Save.REFLEX][i],
+      conditionalsAsArray[Save.WILL][i],
+    ]);
+  }
+  return result;
+});
 </script>
 
 <template>
@@ -32,7 +52,7 @@ function deleteEffect(itemIdx: number) {
           Armor Class ({{ ac.ac }} / t{{ ac.touch }} / ff{{ ac.flatfooted }})
         </h3>
       </template>
-      <div class="grid grid-cols-3">
+      <div class="grid grid-cols-3 text-sm mb-2">
         <div>Base</div>
         <div>Touch</div>
         <div>Flat Footed</div>
@@ -40,7 +60,9 @@ function deleteEffect(itemIdx: number) {
         <div>{{ ac.touch }}</div>
         <div>{{ ac.flatfooted }}</div>
       </div>
-      <div v-for="(mod, cond) in ac.conditional">{{ cond }}: {{ signedInt(mod) }}</div>
+      <div class="text-sm" v-for="(mod, cond) in ac.conditional">
+        {{ signedInt(mod) }} <span class="text-gray-400"> ({{ cond }})</span>
+      </div>
     </Card>
     <Card collapse>
       <template #header>
@@ -48,15 +70,22 @@ function deleteEffect(itemIdx: number) {
           Saving Throws ({{ saves.fort.score }} / {{ saves.reflex.score }} / {{ saves.will.score }})
         </h3>
       </template>
-      <div class="grid grid-cols-3">
+      <div class="grid grid-cols-3 text-sm mb-2">
         <div>Fortitude</div>
         <div>Reflex</div>
         <div>Will</div>
         <div>{{ saves.fort.score }}</div>
         <div>{{ saves.reflex.score }}</div>
         <div>{{ saves.will.score }}</div>
+        <template v-for="conds in conditionalSaves">
+          <template v-for="cond in conds">
+            <div v-if="cond">
+              {{ signedInt(cond[1]) }} <span class="text-gray-400"> ({{ cond[0] }})</span>
+            </div>
+            <div v-else></div>
+          </template>
+        </template>
       </div>
-      <div v-for="(mod, cond) in saves.conditional">{{ cond }}: {{ signedInt(mod) }}</div>
     </Card>
     <h3 class="mt-2 font-bold">Attacks</h3>
     <Attack v-for="attack in attacks" :attack="attack" />

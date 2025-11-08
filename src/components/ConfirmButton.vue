@@ -15,8 +15,19 @@ const emit = defineEmits<{
 }>();
 const confirming = ref(false);
 
+// btn-primary text-primary-content text-primary
+// btn-accent text-accent-content text-accent
+// btn-success text-success-content text-success
+// btn-warning text-warning-content text-warning
+// btn-error text-error-content text-error
 const buttonClasses = computed(() => {
-  return ["btn-" + size, (confirming.value && "btn-") + confirmColor];
+  const classes = [`btn-${size}`];
+  if (confirming.value) {
+    classes.push(`btn-${confirmColor}`, `text-${confirmColor}-content`);
+  } else {
+    classes.push(`text-${confirmColor}`);
+  }
+  return classes;
 });
 
 function confirm() {
