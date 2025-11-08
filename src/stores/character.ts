@@ -7,6 +7,7 @@ import {
   type Attack,
   type CharacterSheet,
   type CharacterSheetV1,
+  type ConditionalModifiers,
   type Effect,
   type EffectTarget,
   type NumericEffectDetails,
@@ -314,7 +315,20 @@ export const useCharacterStore = defineStore("character", () => {
     return character.value.levels.reduce((curr, lvl) => Number(lvl.baseAttack) + curr, 0);
   });
   const ac = computed(
-    (): { ac: number; touch: number; flatfooted: number; conditional: Record<string, number> } => {
+    (): {
+      ac: {
+        value: number;
+        conditional: ConditionalModifiers;
+      };
+      touch: {
+        value: number;
+        conditional: ConditionalModifiers;
+      };
+      flatfooted: {
+        value: number;
+        conditional: ConditionalModifiers;
+      };
+    } => {
       const armor = relevantEffects(character.value, (e) => e.kind === EffectKind.ARMOR);
       const shield = relevantEffects(character.value, (e) => e.kind === EffectKind.SHIELD);
       const effects = relevantEffects(
@@ -322,24 +336,28 @@ export const useCharacterStore = defineStore("character", () => {
         (e) => e.kind !== EffectKind.ARMOR && e.kind !== EffectKind.SHIELD,
       );
 
+      const allEffects = [...armor.slice(0, 1), ...shield.slice(0, 1), ...effects];
       const overallMod = getTotalEffectModifier("ac", effects);
-      const touchMod = getTotalEffectModifier("touchAc", [
-        ...armor.slice(0, 1),
-        ...shield.slice(0, 1),
-        ...effects,
-      ]);
+      const touchMod = getTotalEffectModifier("touchAc", allEffects);
       const armorMod = getTotalEffectModifier("armorAc", [...armor.slice(0, 1), ...effects]);
       const shieldMod = getTotalEffectModifier("shieldAc", [...shield.slice(0, 1), ...effects]);
 
       return {
-        ac: 10 + overallMod + abilityScores.value.dex.mod + armorMod + shieldMod + touchMod,
-        touch: 10 + overallMod + abilityScores.value.dex.mod + touchMod,
-        flatfooted: 10 + overallMod + armorMod + shieldMod,
-        conditional: getConditionalModifiers("ac", [
-          ...armor.slice(0, 1),
-          ...shield.slice(0, 1),
-          ...effects,
-        ]),
+        ac: {
+          value: 10 + overallMod + abilityScores.value.dex.mod + armorMod + shieldMod + touchMod,
+          conditional: getConditionalModifiers(
+            ["ac", "touchAc", "armorAc", "shieldAc"],
+            allEffects,
+          ),
+        },
+        touch: {
+          value: 10 + overallMod + abilityScores.value.dex.mod + touchMod,
+          conditional: getConditionalModifiers(["ac", "touchAc"], allEffects),
+        },
+        flatfooted: {
+          value: 10 + overallMod + armorMod + shieldMod,
+          conditional: getConditionalModifiers(["ac", "armorAc", "shieldAc"], allEffects),
+        },
       };
     },
   );

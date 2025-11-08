@@ -22,24 +22,28 @@ function newEffect() {
 function deleteEffect(itemIdx: number) {
   character.value.temporaryEffects.splice(itemIdx, 1);
 }
-const conditionalSaves = computed(() => {
-  const conditionalsAsArray: Record<SaveT, [string, number][]> = Object.entries(saves.value).reduce(
+function processConditionals(input: Record<string, { conditional: ConditionalModifiers }>) {
+  const conditionalsAsArray: Record<string, [string, number][]> = Object.entries(input).reduce(
     (prev, [save, values]) => {
-      prev[save as SaveT] = Object.entries(values.conditional);
+      prev[save] = Object.entries(values.conditional);
       return prev;
     },
-    {} as Record<SaveT, [string, number][]>,
+    {} as Record<string, [string, number][]>,
   );
   const maxLen = Math.max(...Object.values(conditionalsAsArray).map((v) => v.length));
-  const result: [[string, number]?, [string, number]?, [string, number]?][] = [];
+  const result: Array<[string, number] | undefined>[] = [];
   for (let i = 0; i < maxLen; i++) {
-    result.push([
-      conditionalsAsArray[Save.FORT][i],
-      conditionalsAsArray[Save.REFLEX][i],
-      conditionalsAsArray[Save.WILL][i],
-    ]);
+    result.push(
+      Object.keys(input).map((k) => conditionalsAsArray[k]![i] as [string, number] | undefined),
+    );
   }
   return result;
+}
+const conditionalAc = computed(() => {
+  return processConditionals(ac.value);
+});
+const conditionalSaves = computed(() => {
+  return processConditionals(saves.value);
 });
 </script>
 
@@ -49,19 +53,24 @@ const conditionalSaves = computed(() => {
     <Card collapse>
       <template #header>
         <h3 class="font-bold">
-          Armor Class ({{ ac.ac }} / t{{ ac.touch }} / ff{{ ac.flatfooted }})
+          Armor Class ({{ ac.ac.value }} / t{{ ac.touch.value }} / ff{{ ac.flatfooted.value }})
         </h3>
       </template>
       <div class="grid grid-cols-3 text-sm mb-2">
         <div>Base</div>
         <div>Touch</div>
         <div>Flat Footed</div>
-        <div>{{ ac.ac }}</div>
-        <div>{{ ac.touch }}</div>
-        <div>{{ ac.flatfooted }}</div>
-      </div>
-      <div class="text-sm" v-for="(mod, cond) in ac.conditional">
-        {{ signedInt(mod) }} <span class="text-gray-400"> ({{ cond }})</span>
+        <div>{{ ac.ac.value }}</div>
+        <div>{{ ac.touch.value }}</div>
+        <div>{{ ac.flatfooted.value }}</div>
+        <template v-for="conds in conditionalAc">
+          <template v-for="cond in conds">
+            <div v-if="cond">
+              {{ signedInt(cond[1]) }} <span class="text-gray-400"> ({{ cond[0] }})</span>
+            </div>
+            <div v-else></div>
+          </template>
+        </template>
       </div>
     </Card>
     <Card collapse>
@@ -92,7 +101,7 @@ const conditionalSaves = computed(() => {
 
     <h3 class="mt-2 font-bold">Abilities & Effects</h3>
     <div class="flex flex-col gap-1">
-      <template v-for="(effect, idx) in character.abilities">
+      <template v-for="effect in character.abilities">
         <Effect v-if="!effect.passive" :effect="effect" toggle />
       </template>
       <Effect

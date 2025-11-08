@@ -60,9 +60,9 @@ describe("Character Store AC", () => {
         },
       ],
     });
-    expect(store.ac.ac).toBe(13);
-    expect(store.ac.touch).toBe(11);
-    expect(store.ac.flatfooted).toBe(12);
+    expect(store.ac.ac.value).toBe(13);
+    expect(store.ac.touch.value).toBe(11);
+    expect(store.ac.flatfooted.value).toBe(12);
   });
   test("calculates AC using first armor", () => {
     const store = defaultStore();
@@ -94,7 +94,7 @@ describe("Character Store AC", () => {
         ],
       },
     );
-    expect(store.ac.ac).toBe(12);
+    expect(store.ac.ac.value).toBe(12);
   });
   test("Shield and armor can have enhancement bonus", () => {
     const store = defaultStore();
@@ -135,7 +135,7 @@ describe("Character Store AC", () => {
         ],
       },
     );
-    expect(store.ac.ac).toBe(15);
+    expect(store.ac.ac.value).toBe(15);
   });
   test("Uses only highest from same typed bonuses except unnamed", () => {
     const store = defaultStore();
@@ -164,7 +164,7 @@ describe("Character Store AC", () => {
         },
       ],
     });
-    expect(store.ac.ac).toBe(17);
+    expect(store.ac.ac.value).toBe(17);
   });
   test("Returns conditional modifiers", () => {
     const store = defaultStore();
@@ -180,9 +180,45 @@ describe("Character Store AC", () => {
         },
       ],
     });
-    expect(store.ac.ac).toBe(10);
-    expect(store.ac.conditional).toEqual({
+    expect(store.ac.ac.value).toBe(10);
+    expect(store.ac.ac.conditional).toEqual({
       giants: 1,
+    });
+    expect(store.ac.touch.conditional).toEqual({
+      giants: 1,
+    });
+    expect(store.ac.flatfooted.conditional).toEqual({
+      giants: 1,
+    });
+  });
+  test("Returns conditional touch and flat footed ac", () => {
+    const store = defaultStore();
+    store.character.items.push({
+      name: "armor",
+      kind: EffectKind.ARMOR,
+      weightClass: "light",
+      details: [
+        {
+          conditional: "giants",
+          target: "touchAc",
+          modifier: 1,
+        },
+        {
+          conditional: "giants",
+          target: "armorAc",
+          modifier: 2,
+        },
+      ],
+    });
+    expect(store.ac.ac.value).toBe(10);
+    expect(store.ac.ac.conditional).toEqual({
+      giants: 3,
+    });
+    expect(store.ac.touch.conditional).toEqual({
+      giants: 1,
+    });
+    expect(store.ac.flatfooted.conditional).toEqual({
+      giants: 2,
     });
   });
 });
