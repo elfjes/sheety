@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, useTemplateRef } from "vue";
 
 const model = defineModel<number>({ required: true });
 const {
@@ -31,11 +31,15 @@ const additionalButtonClasses = computed(() => {
 const additionalInputClasses = computed(() => {
   return [inputWidth.value, "input-" + size, "text-" + size];
 });
+
+const input = useTemplateRef("input");
+defineExpose({ input });
 </script>
 <template>
   <div class="join rounded-xs">
     <button class="btn join-item" :class="additionalButtonClasses" @click="decrement()">-</button>
     <input
+      ref="input"
       class="input join-item text-center p-px"
       :class="additionalInputClasses"
       type="number"

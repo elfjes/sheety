@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useCharacterStore } from "@/stores/character";
-import { computed, ref } from "vue";
+import { computed, nextTick, ref, useTemplateRef } from "vue";
 import NumberInput from "./NumberInput.vue";
 import { storeToRefs } from "pinia";
 import Card from "./Card.vue";
@@ -15,9 +15,15 @@ const hitpointMax = computed(() =>
 const addingEvent = ref(false);
 const isDamageEvent = ref(false);
 const eventValue = ref(0);
+const numberInput = useTemplateRef("numberInput");
+
 function newEvent(isDamage: boolean = false) {
   addingEvent.value = true;
   isDamageEvent.value = isDamage;
+  nextTick(() => {
+    numberInput.value?.input?.focus();
+    numberInput.value?.input?.select();
+  });
 }
 function finishNewEvent() {
   if (eventValue.value !== 0) {
@@ -59,6 +65,7 @@ function resetHP() {
     </div>
     <div v-if="addingEvent" class="flex gap-1 items-center">
       <NumberInput
+        ref="numberInput"
         v-model="eventValue"
         :btnStyle="isDamageEvent ? 'btn-error' : 'btn-success'"
         @keydown.enter="finishNewEvent()"
@@ -78,9 +85,13 @@ function resetHP() {
         <button class="join-item btn" @click="newEvent(false)">
           <i class="fas fa-heart text-success" />
         </button>
-        <button class="join-item btn" @click="hitpoints.events.pop()">
-          <i class="fas fa-arrow-up" />
-        </button>
+
+        <ConfirmButton
+          class="join-item"
+          confirm-color="warning"
+          icon="fa-minus"
+          @confirm="hitpoints.events.pop()"
+        />
         <ConfirmButton
           class="join-item"
           confirm-color="warning"

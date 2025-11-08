@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, stop } from "vue";
 import { EffectKind, type Effect } from "../types.ts";
 import EffectDetails from "./EffectDetails.vue";
 import Card from "./Card.vue";
@@ -50,6 +50,15 @@ function confirmDelete() {
   }
   deleting.value = true;
 }
+function stopDeleting() {
+  // When using a touch screen and tapping on the toggle-edit-button, it should be disabled and
+  // nothing should happen. However, the blur event is triggered before the click event, so the
+  // button activates before begin clicked. Here we delay the result of the blur event ever so
+  // slightly to make the click event happen before the blur event
+  setTimeout(() => {
+    deleting.value = false;
+  }, 50);
+}
 function newEffect() {
   effect.details.push({
     target: "str",
@@ -68,7 +77,7 @@ function addNewTag() {
 <template>
   <Card v-model:open="open" :collapse="!editing">
     <template #header>
-      <div v-if="editing" class="flex flex-row gap-1">
+      <div v-if="editing" class="flex flex-row gap-1 items-center">
         <input v-if="toggle" type="checkbox" class="checkbox checkbox-sm" v-model="effect.active" />
         <input class="input input-sm w-full" v-model="effect.name" />
         <div class="ml-auto"></div>
@@ -77,8 +86,7 @@ function addNewTag() {
           class="btn btn-sm"
           :class="deleting && 'btn-error'"
           @click="confirmDelete()"
-          @blur="deleting = false"
-          @mouseleave="deleting = false"
+          @blur="stopDeleting()"
         >
           <i class="fas fa-trash text-center w-8" />
         </button>
