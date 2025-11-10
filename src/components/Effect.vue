@@ -123,7 +123,11 @@ function addNewTag() {
         <slot></slot>
       </div>
       <template v-for="(_, i) in effect.details">
-        <EffectDetails v-model="effect.details[i]!" :editing="editing" @delete="deleteEffect(i)" />
+        <EffectDetails
+          v-model:effect="effect.details[i]!"
+          :editing="editing"
+          @delete="deleteEffect(i)"
+        />
       </template>
       <div
         v-if="editing"

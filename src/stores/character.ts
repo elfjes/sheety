@@ -9,6 +9,7 @@ import {
   type CharacterSheetV1,
   type ConditionalModifiers,
   type Effect,
+  type EffectDetails,
   type EffectTarget,
   type NumericEffectDetails,
   type NumericEffectTargetT,
@@ -84,8 +85,23 @@ function relevantEffects(
   character: CharacterSheet,
   filter?: (effect: Effect) => boolean,
   matchTags?: string[],
-) {
-  return [...character.abilities, ...character.items, ...character.temporaryEffects]
+): EffectDetails[] {
+  const maxItemCount = {
+    [EffectKind.SHIELD]: 1,
+    [EffectKind.ARMOR]: 1,
+  };
+  const items = character.items.filter((item) => {
+    if (!hasOwnProperty(maxItemCount, item.kind)) {
+      return true;
+    }
+
+    if (maxItemCount[item.kind] > 0) {
+      maxItemCount[item.kind] -= 1;
+      return true;
+    }
+    return false;
+  });
+  return [...character.abilities, ...items, ...character.temporaryEffects]
     .filter((effect) => effect.active !== false)
     .filter(filter ?? (() => true))
     .filter((effect) => {
@@ -96,16 +112,15 @@ function relevantEffects(
         if (effect.tags.includes(tag)) return true;
       }
       return false;
-    });
+    })
+    .map((e) => e.details)
+    .flat();
 }
-function getEffectsForTarget(target: EffectTarget | EffectTarget[], effects: Effect[]) {
+function getEffectsForTarget(target: EffectTarget | EffectTarget[], effects: EffectDetails[]) {
   if (!Array.isArray(target)) {
     target = [target];
   }
-  return effects
-    .map((item) => item.details)
-    .flat()
-    .filter((effect) => target.includes(effect.target));
+  return effects.filter((effect) => target.includes(effect.target));
 }
 function getModifiersByEffectType(effects: NumericEffectDetails[]) {
   const effectsByType: Record<string, number[]> = {};
@@ -128,8 +143,8 @@ function getEffectModifier(effects: NumericEffectDetails[]) {
 
 function getConditionalModifiers(
   target: NumericEffectTargetT | NumericEffectTargetT[],
-  effects: Effect[],
-) {
+  effects: EffectDetails[],
+): ConditionalModifiers<number> {
   const effectDetails = getEffectsForTarget(target, effects) as NumericEffectDetails[];
   const modifiers: Record<string, Record<string, number>> = {};
   // here we filter for named bonuses, because only those do not stack
@@ -171,7 +186,7 @@ function getConditionalModifiers(
       );
     }
   }
-  return Object.entries(conditionals).reduce(
+  const aggregate = Object.entries(conditionals).reduce(
     (result, [conditional, mods]) => {
       const value = Object.values(mods).reduce((a, b) => a + b, 0);
       if (value === 0) return result;
@@ -180,10 +195,11 @@ function getConditionalModifiers(
     },
     {} as Record<string, number>,
   );
+  return Object.entries(aggregate).map(([key, value]) => ({ condition: key, modifier: value }));
 }
 function getTotalEffectModifier(
   target: NumericEffectTargetT[] | NumericEffectTargetT,
-  effects: Effect[],
+  effects: EffectDetails[],
 ) {
   return getEffectModifier(getEffectsForTarget(target, effects) as NumericEffectDetails[]);
 }
@@ -318,29 +334,29 @@ export const useCharacterStore = defineStore("character", () => {
     (): {
       ac: {
         value: number;
-        conditional: ConditionalModifiers;
+        conditional: ConditionalModifiers<number>;
       };
       touch: {
         value: number;
-        conditional: ConditionalModifiers;
+        conditional: ConditionalModifiers<number>;
       };
       flatfooted: {
         value: number;
-        conditional: ConditionalModifiers;
+        conditional: ConditionalModifiers<number>;
       };
     } => {
-      const armor = relevantEffects(character.value, (e) => e.kind === EffectKind.ARMOR);
-      const shield = relevantEffects(character.value, (e) => e.kind === EffectKind.SHIELD);
-      const effects = relevantEffects(
+      const armorEffects = relevantEffects(character.value, (e) => e.kind === EffectKind.ARMOR);
+      const shieldEffects = relevantEffects(character.value, (e) => e.kind === EffectKind.SHIELD);
+      const otherEffects = relevantEffects(
         character.value,
         (e) => e.kind !== EffectKind.ARMOR && e.kind !== EffectKind.SHIELD,
       );
 
-      const allEffects = [...armor.slice(0, 1), ...shield.slice(0, 1), ...effects];
-      const overallMod = getTotalEffectModifier("ac", effects);
+      const allEffects = [...armorEffects, ...shieldEffects, ...otherEffects];
+      const overallMod = getTotalEffectModifier("ac", allEffects);
       const touchMod = getTotalEffectModifier("touchAc", allEffects);
-      const armorMod = getTotalEffectModifier("armorAc", [...armor.slice(0, 1), ...effects]);
-      const shieldMod = getTotalEffectModifier("shieldAc", [...shield.slice(0, 1), ...effects]);
+      const armorMod = getTotalEffectModifier("armorAc", [...armorEffects, ...otherEffects]);
+      const shieldMod = getTotalEffectModifier("shieldAc", [...shieldEffects, ...otherEffects]);
 
       return {
         ac: {
@@ -367,7 +383,7 @@ export const useCharacterStore = defineStore("character", () => {
       .filter((item) => item.active)
       .map((wpn: Weapon) => {
         const effects = [
-          wpn,
+          ...wpn.details,
           ...relevantEffects(character.value, (e) => e.kind !== EffectKind.WEAPON, wpn.tags),
         ];
         const adjustedBaseAttack = baseAttack.value + getTotalEffectModifier("baseAttack", effects);
@@ -391,10 +407,25 @@ export const useCharacterStore = defineStore("character", () => {
           damage:
             Math.floor(abilityScores.value.str.mod * wpn.strMod) +
             getEffectModifier(getEffectsForTarget("damage", effects) as NumericEffectDetails[]),
-          extraDice: (getEffectsForTarget("damageDie", effects) as TextEffectDetails[])
+          extraDice: (
+            getEffectsForTarget("damageDie", effects).filter(
+              (e) => !e.conditional,
+            ) as TextEffectDetails[]
+          )
             .map((e) => e.value)
             .join(" + "),
-          conditional: getConditionalModifiers("attack", effects),
+          conditionalAttack: getConditionalModifiers("attack", effects),
+          conditionalDamage: getEffectsForTarget(["damage", "damageDie"], effects)
+            .filter((e) => e.conditional)
+            .map((e) => {
+              console.log(e);
+              return {
+                condition: e.conditional!,
+                modifier: hasOwnProperty(e, "modifier")
+                  ? (e as NumericEffectDetails).modifier
+                  : (e as TextEffectDetails).value,
+              };
+            }),
         };
       });
   });

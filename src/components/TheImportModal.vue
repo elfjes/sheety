@@ -45,7 +45,11 @@ function onImport() {
       v-model="importValue"
     />
     <template #buttons>
-      <button class="btn" :class="{ 'btn-success': isSuccess }" @click="onImport">
+      <button
+        class="btn"
+        :class="{ 'btn-success': isSuccess, 'btn-primary': !isSuccess }"
+        @click="onImport"
+      >
         {{ isSuccess ? "Success!" : "Import" }}
       </button>
       <button class="btn" @click="close">Cancel</button>

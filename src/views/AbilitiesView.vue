@@ -31,7 +31,7 @@ function deleteAbility(itemIdx: number) {
       </label>
     </Effect>
     <div
-      class="btn btn-ghost w-full text-gray-400 border-dashed border-gray-400"
+      class="btn btn-ghost bg-base-200/60 w-full text-gray-400 border-dashed border-gray-400"
       @click="newAbility()"
     >
       Add a new ability...

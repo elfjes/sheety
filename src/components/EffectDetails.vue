@@ -1,21 +1,29 @@
 <script setup lang="ts">
-import type {
-  AbilityT,
-  EffectDetails,
-  NumericEffectDetails,
-  NumericEffectTargetT,
-  SaveT,
-  TextEffectDetails,
-  TextEffectTargetT,
+import {
+  type AbilityT,
+  type EffectDetails,
+  type EffectTarget,
+  type NumericEffectDetails,
+  type NumericEffectTargetT,
+  type SaveT,
+  type TextEffectDetails,
+  type TextEffectTargetT,
 } from "@/types";
 import NumberInput from "./NumberInput.vue";
 import ConfirmButton from "./ConfirmButton.vue";
 import { hasOwnProperty, signedInt } from "@/utils";
-import { ref } from "vue";
+import { computed } from "vue";
 import { effectTypes } from "@/constants";
-const effect = defineModel<EffectDetails>({ required: true });
+import { useConfirmation } from "@/composables/useConfirmation";
+const effect = defineModel<EffectDetails>("effect", { required: true });
 const { editing = false } = defineProps<{ editing: boolean }>();
-const emit = defineEmits(["delete"]);
+const emit = defineEmits<{
+  (e: "delete"): void;
+  (e: "update:effect", v: EffectDetails): void;
+}>();
+const { confirming, events } = useConfirmation(() => {
+  toggleConditional();
+});
 const numericTargets: Record<NumericEffectTargetT | AbilityT | SaveT, string> = {
   str: "Strength",
   dex: "Dexterity",
@@ -44,17 +52,63 @@ const textTargets: Record<TextEffectTargetT, string> = {
 };
 const allTargets = { ...numericTargets, ...textTargets };
 
+const hasConditional = computed(() => effect.value.conditional != undefined);
+const conditionalButtonEvents = computed(() => {
+  if (hasConditional.value) return events;
+  return {
+    click: () => (effect.value.conditional ??= ""),
+  };
+});
+function toggleConditional() {
+  if (hasConditional.value) {
+    effect.value.conditional = undefined;
+  } else {
+    effect.value.conditional = "";
+  }
+}
+
 function confirmDelete() {
   emit("delete");
+}
+
+function updateTarget(newTarget: EffectTarget) {
+  if (hasOwnProperty(numericTargets, newTarget)) {
+    emit("update:effect", {
+      target: newTarget,
+      modifier: (effect.value as NumericEffectDetails).modifier ?? 0,
+      tags: effect.value.tags,
+      effectType: effect.value.effectType,
+      conditional: effect.value.conditional,
+    });
+  } else if (hasOwnProperty(textTargets, newTarget)) {
+    emit("update:effect", {
+      target: newTarget,
+      value: (effect.value as TextEffectDetails).value ?? "",
+      tags: effect.value.tags,
+      effectType: effect.value.effectType,
+      conditional: effect.value.conditional,
+    });
+  }
 }
 </script>
 <template>
   <div class="flex flex-row gap-1">
     <template v-if="editing">
-      <select class="select select-xs w-auto min-w-20" v-model="effect.target">
+      <select
+        class="select select-xs w-auto min-w-20"
+        :value="effect.target"
+        @input="(val) => updateTarget((val.target as HTMLInputElement).value as EffectTarget)"
+      >
         <option v-for="(desc, key) in allTargets" :value="key">{{ desc }}</option>
       </select>
-      <button class="btn btn-xs" @click="effect.conditional ??= ''">?</button>
+      <button
+        class="btn btn-xs"
+        :class="{ 'btn-error': confirming, 'btn-primary': !confirming && hasConditional }"
+        v-on="conditionalButtonEvents"
+      >
+        ?
+      </button>
+
       <template v-if="hasOwnProperty(numericTargets, effect.target)">
         <NumberInput size="xs" v-model="(effect as NumericEffectDetails).modifier" />
         <select class="select select-xs" v-model="effect.effectType">
@@ -82,23 +136,15 @@ function confirmDelete() {
         <div v-if="effect.conditional" class="text-gray-400">({{ effect.conditional }})</div>
         <div class="text-gray-400">({{ effect.effectType || "-" }})</div>
       </template>
-      <div v-else-if="hasOwnProperty(textTargets, effect.target)">
-        {{ (effect as TextEffectDetails).value }}
-      </div>
+      <template v-else-if="hasOwnProperty(textTargets, effect.target)">
+        <div>{{ (effect as TextEffectDetails).value }}</div>
+        <div v-if="effect.conditional" class="text-gray-400">({{ effect.conditional }})</div>
+      </template>
     </template>
   </div>
-  <div
-    v-if="editing && effect.conditional != undefined"
-    class="flex flex-row gap-1 text-xs pl-5 pr-9 items-center"
-  >
+  <div v-if="editing && hasConditional" class="flex flex-row gap-1 text-xs pl-5 pr-9 items-center">
     <div>Conditional:</div>
     <input class="input input-xs text-xs" v-model="effect.conditional" />
-    <ConfirmButton
-      size="xs"
-      confirm-color="error"
-      icon="fa-trash"
-      @confirm="effect.conditional = undefined"
-    />
   </div>
 </template>
 <style scoped></style>

@@ -50,10 +50,13 @@ function openModal(modal: "import" | "export") {
 <template>
   <TheImportModal v-model:open="importModalOpen" mode="import"></TheImportModal>
   <TheExportModal v-model:open="exportModalOpen" mode="import"></TheExportModal>
-  <header class="p-2 flex flex-col align-center shadow-sm">
+  <header class="p-2 flex flex-col align-center bg-primary shadow-sm">
     <div class="flex flex-row gap-2 items-center">
       <div class="flex-none cursor-pointer">
-        <div class="btn btn-ghost btn-square" @click="open = !open">
+        <div
+          class="btn btn-ghost hover:bg-[color-mix(in_oklch,_var(--color-primary)_80%,_#ffffff)] btn-square"
+          @click="open = !open"
+        >
           <i class="fas fa-bars text-2xl"></i>
         </div>
       </div>

@@ -74,8 +74,8 @@ function newLevel() {
           <div>
             <button
               v-if="idx === character.levels.length - 1"
-              class="btn btn-xs btn-ghost"
-              :class="deleting && 'btn-error'"
+              class="btn btn-xs"
+              :class="deleting ? 'btn-error' : 'btn-ghost'"
               @click="confirmDelete(idx)"
               @blur="deleting = false"
               @mouseleave="deleting = false"

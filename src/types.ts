@@ -123,7 +123,12 @@ export interface TextEffectDetails extends BaseEffectDetails {
   value: string;
 }
 export type EffectDetails = NumericEffectDetails | TextEffectDetails;
-export type ConditionalModifiers = Record<string, number>;
+export type ConditionalTextModifiers = { condition: string; modifier: string }[];
+export interface Conditional<T extends string | number> {
+  condition: string;
+  modifier: T;
+}
+export type ConditionalModifiers<T extends string | number> = Conditional<T>[];
 export interface Attack {
   name: string;
   attack: number;
@@ -131,7 +136,8 @@ export interface Attack {
   damage: number;
   dice: string;
   extraDice: string;
-  conditional: ConditionalModifiers;
+  conditionalAttack: ConditionalModifiers<number>;
+  conditionalDamage: ConditionalModifiers<string | number>;
 }
 
 export interface Action {
@@ -141,6 +147,6 @@ export interface Action {
 export interface SingleSaveStats {
   base: number;
   score: number;
-  conditional: ConditionalModifiers;
+  conditional: ConditionalModifiers<number>;
 }
 export type SavesStats = Record<SaveT, SingleSaveStats>;

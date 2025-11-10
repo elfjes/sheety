@@ -5,6 +5,7 @@ import NumberInput from "./NumberInput.vue";
 import { storeToRefs } from "pinia";
 import Card from "./Card.vue";
 import ConfirmButton from "./ConfirmButton.vue";
+import { useConfirmation } from "@/composables/useConfirmation";
 
 const store = useCharacterStore();
 const { hitpoints } = storeToRefs(store);
@@ -16,6 +17,13 @@ const addingEvent = ref(false);
 const isDamageEvent = ref(false);
 const eventValue = ref(0);
 const numberInput = useTemplateRef("numberInput");
+
+const { confirming: undoConfirming, events: undoEvents } = useConfirmation(() => {
+  hitpoints.value.events.pop();
+});
+const { confirming: resetConfirming, events: resetEvents } = useConfirmation(() => {
+  store.resetHitpoints();
+});
 
 function newEvent(isDamage: boolean = false) {
   addingEvent.value = true;
@@ -78,26 +86,27 @@ function resetHP() {
       </button>
     </div>
     <div v-else>
-      <div class="join">
-        <button class="join-item btn" @click="newEvent(true)">
+      <div class="flex w-full join">
+        <button class="flex-1 join-item btn" @click="newEvent(true)">
           <i class="fas fa-skull text-error" />
         </button>
-        <button class="join-item btn" @click="newEvent(false)">
+        <button class="flex-1 join-item btn" @click="newEvent(false)">
           <i class="fas fa-heart text-success" />
         </button>
-
-        <ConfirmButton
-          class="join-item"
-          confirm-color="warning"
-          icon="fa-minus"
-          @confirm="hitpoints.events.pop()"
-        />
-        <ConfirmButton
-          class="join-item"
-          confirm-color="warning"
-          icon="fa-rotate-left"
-          @confirm="resetHP"
-        />
+        <button
+          class="flex-1 join-item btn"
+          :class="{ 'btn-warning': undoConfirming }"
+          v-on="undoEvents"
+        >
+          <i class="fas fa-minus" />
+        </button>
+        <button
+          class="flex-1 join-item btn"
+          :class="{ 'btn-warning': resetConfirming }"
+          v-on="resetEvents"
+        >
+          <i class="fas fa-rotate-left" />
+        </button>
       </div>
     </div>
   </Card>

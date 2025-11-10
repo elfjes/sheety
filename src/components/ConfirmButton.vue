@@ -3,11 +3,11 @@ import { computed, ref } from "vue";
 
 const {
   confirmColor,
-  icon,
+  icon = "",
   size = "md",
 } = defineProps<{
   confirmColor: string;
-  icon: string;
+  icon?: string;
   size?: string;
 }>();
 const emit = defineEmits<{
@@ -48,7 +48,9 @@ function confirm() {
     @blur="confirming = false"
     @mouseleave="confirming = false"
   >
-    <i class="fas text-center" :class="icon" />
+    <slot :confirming="confirming">
+      <i class="fas text-center" :class="icon" /> <slot id="text"></slot>
+    </slot>
   </button>
 </template>
 

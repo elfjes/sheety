@@ -3,7 +3,7 @@ import HitPoints from "@/components/HitPoints.vue";
 import Attack from "@/components/Attack.vue";
 import { useCharacterStore } from "@/stores/character";
 import { storeToRefs } from "pinia";
-import { EffectKind, Save, type ConditionalModifiers, type SaveT } from "@/types";
+import { EffectKind, Save, type Conditional, type ConditionalModifiers, type SaveT } from "@/types";
 import Effect from "@/components/Effect.vue";
 import Card from "@/components/Card.vue";
 import { signedInt } from "@/utils";
@@ -22,20 +22,11 @@ function newEffect() {
 function deleteEffect(itemIdx: number) {
   character.value.temporaryEffects.splice(itemIdx, 1);
 }
-function processConditionals(input: Record<string, { conditional: ConditionalModifiers }>) {
-  const conditionalsAsArray: Record<string, [string, number][]> = Object.entries(input).reduce(
-    (prev, [save, values]) => {
-      prev[save] = Object.entries(values.conditional);
-      return prev;
-    },
-    {} as Record<string, [string, number][]>,
-  );
-  const maxLen = Math.max(...Object.values(conditionalsAsArray).map((v) => v.length));
-  const result: Array<[string, number] | undefined>[] = [];
+function processConditionals(input: Record<string, { conditional: ConditionalModifiers<number> }>) {
+  const maxLen = Math.max(...Object.values(input).map((v) => v.conditional.length));
+  const result: Array<Conditional<number> | undefined>[] = [];
   for (let i = 0; i < maxLen; i++) {
-    result.push(
-      Object.keys(input).map((k) => conditionalsAsArray[k]![i] as [string, number] | undefined),
-    );
+    result.push(Object.keys(input).map((k) => input[k]!.conditional[i]));
   }
   return result;
 }
@@ -66,7 +57,8 @@ const conditionalSaves = computed(() => {
         <template v-for="conds in conditionalAc">
           <template v-for="cond in conds">
             <div v-if="cond">
-              {{ signedInt(cond[1]) }} <span class="text-gray-400"> ({{ cond[0] }})</span>
+              {{ signedInt(cond.modifier) }}
+              <span class="text-gray-400"> ({{ cond.condition }})</span>
             </div>
             <div v-else></div>
           </template>
@@ -89,7 +81,8 @@ const conditionalSaves = computed(() => {
         <template v-for="conds in conditionalSaves">
           <template v-for="cond in conds">
             <div v-if="cond">
-              {{ signedInt(cond[1]) }} <span class="text-gray-400"> ({{ cond[0] }})</span>
+              {{ signedInt(cond.modifier) }}
+              <span class="text-gray-400"> ({{ cond.condition }})</span>
             </div>
             <div v-else></div>
           </template>
@@ -112,7 +105,7 @@ const conditionalSaves = computed(() => {
         editable
       />
       <div
-        class="btn btn-ghost w-full text-gray-400 border-dashed border-gray-400"
+        class="btn btn-ghost bg-base-200/60 w-full text-gray-400 border-dashed border-gray-400"
         @click="newEffect()"
       >
         Add a new effect...

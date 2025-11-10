@@ -19,7 +19,7 @@ function deleteItem(itemIdx: number) {
   <div class="flex flex-col gap-1">
     <Item v-for="(item, idx) in character.items" :item="item" @delete="deleteItem(idx)" />
     <div
-      class="btn btn-ghost w-full text-gray-400 border-dashed border-gray-400"
+      class="btn btn-ghost bg-base-200/60 w-full text-gray-400 border-dashed border-gray-400"
       @click="newItem()"
     >
       Add a new item...

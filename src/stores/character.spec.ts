@@ -181,15 +181,24 @@ describe("Character Store AC", () => {
       ],
     });
     expect(store.ac.ac.value).toBe(10);
-    expect(store.ac.ac.conditional).toEqual({
-      giants: 1,
-    });
-    expect(store.ac.touch.conditional).toEqual({
-      giants: 1,
-    });
-    expect(store.ac.flatfooted.conditional).toEqual({
-      giants: 1,
-    });
+    expect(store.ac.ac.conditional).toEqual([
+      {
+        condition: "giants",
+        modifier: 1,
+      },
+    ]);
+    expect(store.ac.touch.conditional).toEqual([
+      {
+        condition: "giants",
+        modifier: 1,
+      },
+    ]);
+    expect(store.ac.flatfooted.conditional).toEqual([
+      {
+        condition: "giants",
+        modifier: 1,
+      },
+    ]);
   });
   test("Returns conditional touch and flat footed ac", () => {
     const store = defaultStore();
@@ -211,15 +220,24 @@ describe("Character Store AC", () => {
       ],
     });
     expect(store.ac.ac.value).toBe(10);
-    expect(store.ac.ac.conditional).toEqual({
-      giants: 3,
-    });
-    expect(store.ac.touch.conditional).toEqual({
-      giants: 1,
-    });
-    expect(store.ac.flatfooted.conditional).toEqual({
-      giants: 2,
-    });
+    expect(store.ac.ac.conditional).toEqual([
+      {
+        condition: "giants",
+        modifier: 3,
+      },
+    ]);
+    expect(store.ac.touch.conditional).toEqual([
+      {
+        condition: "giants",
+        modifier: 1,
+      },
+    ]);
+    expect(store.ac.flatfooted.conditional).toEqual([
+      {
+        condition: "giants",
+        modifier: 2,
+      },
+    ]);
   });
 });
 
@@ -245,15 +263,24 @@ describe("CharacterStore saves", () => {
         },
       ],
     });
-    expect(store.saves.fort.conditional).toEqual({
-      fear: 3,
-    });
-    expect(store.saves.reflex.conditional).toEqual({
-      fear: 3,
-    });
-    expect(store.saves.will.conditional).toEqual({
-      fear: 3,
-    });
+    expect(store.saves.fort.conditional).toEqual([
+      {
+        condition: "fear",
+        modifier: 3,
+      },
+    ]);
+    expect(store.saves.reflex.conditional).toEqual([
+      {
+        condition: "fear",
+        modifier: 3,
+      },
+    ]);
+    expect(store.saves.will.conditional).toEqual([
+      {
+        condition: "fear",
+        modifier: 3,
+      },
+    ]);
   });
   test("Returns highest named conditional bonuses", () => {
     const store = defaultStore();
@@ -275,9 +302,12 @@ describe("CharacterStore saves", () => {
         },
       ],
     });
-    expect(store.saves.will.conditional).toEqual({
-      fear: 2,
-    });
+    expect(store.saves.will.conditional).toEqual([
+      {
+        condition: "fear",
+        modifier: 2,
+      },
+    ]);
   });
   test("Returns only extra named conditional bonus if unconditional bonus exists", () => {
     const store = defaultStore();
@@ -298,9 +328,12 @@ describe("CharacterStore saves", () => {
         },
       ],
     });
-    expect(store.saves.will.conditional).toEqual({
-      fear: 1,
-    });
+    expect(store.saves.will.conditional).toEqual([
+      {
+        condition: "fear",
+        modifier: 1,
+      },
+    ]);
   });
   test("Doesn't return conditional bonus if regular named bonus exists", () => {
     const store = defaultStore();
@@ -321,7 +354,7 @@ describe("CharacterStore saves", () => {
         },
       ],
     });
-    expect(store.saves.will.conditional).toEqual({});
+    expect(store.saves.will.conditional).toEqual([]);
   });
   test("Doesn't return conditional bonus if exactly 0", () => {
     const store = defaultStore();
@@ -342,6 +375,6 @@ describe("CharacterStore saves", () => {
         },
       ],
     });
-    expect(store.saves.will.conditional).toEqual({});
+    expect(store.saves.will.conditional).toEqual([]);
   });
 });

@@ -10,21 +10,21 @@ const emit = defineEmits<{
 }>();
 const { characterAsExport } = storeToRefs(useCharacterStore());
 
-const copySuccess = ref(false);
+const isSuccess = ref(false);
 const textarea = useTemplateRef("textarea");
 function onCopy() {
-  if (copySuccess.value) {
+  if (isSuccess.value) {
     close();
     return;
   }
   navigator.clipboard.writeText(characterAsExport.value);
-  copySuccess.value = true;
+  isSuccess.value = true;
 }
 
 function close() {
   emit("update:open", false);
   setTimeout(() => {
-    copySuccess.value = false;
+    isSuccess.value = false;
   }, 300);
 }
 </script>
@@ -40,8 +40,12 @@ function close() {
       :value="characterAsExport"
     />
     <template #buttons>
-      <button class="btn" :class="{ 'btn-success': copySuccess }" @click="onCopy">
-        {{ copySuccess ? "Success!" : "Copy" }}
+      <button
+        class="btn"
+        :class="{ 'btn-success': isSuccess, 'btn-primary': !isSuccess }"
+        @click="onCopy"
+      >
+        {{ isSuccess ? "Success!" : "Copy" }}
       </button>
       <button class="btn" @click="close">Cancel</button>
     </template>

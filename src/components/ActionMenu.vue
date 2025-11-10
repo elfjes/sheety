@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Action } from "@/types";
-import { ref } from "vue";
+import { nextTick, ref, useTemplateRef } from "vue";
 
 const { actions } = defineProps<{
   actions: Action[];
@@ -12,22 +12,41 @@ const emit = defineEmits<{
 
 const open = ref(false);
 
+function toggleMenu() {
+  open.value = !open.value;
+  open.value &&
+    nextTick(() => {
+      document.addEventListener("click", checkFocus);
+    });
+}
+const menu = useTemplateRef("menu");
+
+const checkFocus = (event: Event) => {
+  if (menu.value && !menu.value.contains(event.target as Node)) {
+    closeMenu();
+  }
+};
+
+function closeMenu() {
+  open.value = false;
+  document.removeEventListener("click", checkFocus);
+}
 function performAction(action: Action) {
   emit("action", action.event);
   emit(action.event);
-  open.value = false;
+  closeMenu();
 }
 </script>
 
 <template>
-  <div class="inline-block relative">
-    <button class="btn btn-ghost btn-square" @click="open = !open">
+  <div ref="menu" class="inline-block relative">
+    <button class="btn btn-ghost btn-square" @click="toggleMenu">
       <i class="fas fa-ellipsis-vertical text-xl"></i>
     </button>
     <div class="absolute right-0 w-40 z-10 pt-1">
       <ul
         v-if="open"
-        class="absolute border rounded-xs border-base-300 right-0 w-full bg-base-100 z-10 shadow-md py-1"
+        class="relative border rounded-field border-base-300 right-0 w-full bg-base-200 z-10 shadow-md py-1"
       >
         <li
           v-for="action in actions"
