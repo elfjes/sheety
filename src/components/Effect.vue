@@ -76,9 +76,11 @@ function addNewTag() {
 </script>
 <template>
   <Card v-model:open="open" :collapse="!editing">
+    <template #pre-header v-if="toggle">
+      <input type="checkbox" class="checkbox checkbox-sm mr-1" v-model="effect.active" />
+    </template>
     <template #header>
       <div v-if="editing" class="flex flex-row gap-1 items-center">
-        <input v-if="toggle" type="checkbox" class="checkbox checkbox-sm" v-model="effect.active" />
         <input class="input input-sm w-full" v-model="effect.name" />
         <div class="ml-auto"></div>
         <button
@@ -95,7 +97,6 @@ function addNewTag() {
         </button>
       </div>
       <div v-else class="flex flex-row gap-1 items-center">
-        <input v-if="toggle" type="checkbox" class="checkbox checkbox-sm" v-model="effect.active" />
         <h3 class="font-bold overflow-hidden text-ellipsis flex-shrink-1">
           {{ effect.name }}
         </h3>
@@ -110,10 +111,10 @@ function addNewTag() {
       </div>
     </template>
     <div class="flex flex-col gap-1 max-w-100">
-      <div v-if="editing" class="flex flex-row flex-wrap justify-stretch gap-1">
+      <div v-if="editing" class="grid grid-cols-2 justify-stretch gap-1">
         <label
           v-if="editing && allowedKinds.length > 1"
-          class="select select-sm min-w-max max-w-1/2"
+          class="select select-sm"
         >
           <span class="label">Type</span>
           <select class="min-w-max" v-model="effect.kind">

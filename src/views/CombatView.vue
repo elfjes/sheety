@@ -105,7 +105,7 @@ const conditionalSaves = computed(() => {
         editable
       />
       <div
-        class="btn btn-ghost bg-base-200/60 w-full text-gray-400 border-dashed border-gray-400"
+        class="btn btn-ghost rounded-box bg-base-200/60 w-full text-gray-400 border-dashed border-gray-400"
         @click="newEffect()"
       >
         Add a new effect...

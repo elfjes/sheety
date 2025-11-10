@@ -1,16 +1,12 @@
 <script setup lang="ts">
 import { ref, watchEffect } from "vue";
 import { EffectKind, type Item } from "../types.ts";
-import Card from "./Card.vue";
 import Effect from "./Effect.vue";
 import NumberInput from "./NumberInput.vue";
 
 const { item } = defineProps<{ item: Item }>();
 const emit = defineEmits<{ (e: "delete"): void; (e: "update:item", item: Item): void }>();
-const open = ref(false);
 const editing = ref(false);
-const deleting = ref(false);
-const newTagValue = ref("");
 if (!item.name) {
   editing.value = true;
 }
@@ -30,17 +26,20 @@ watchEffect(() => {
     editable
     toggle
   >
-    <div
-      v-if="item.kind === EffectKind.WEAPON"
-      class="min-w-max border rounded-sm border-gray-300 flex flex-row flex-grow"
-    >
-      <span class="px-3 label text-xs my-1 border-gray-100">Str x</span>
-      <NumberInput class="ml-auto" size="sm" :step="0.5" v-model="item.strMod" />
-    </div>
-    <label v-if="item.kind === EffectKind.WEAPON" class="input input-sm w-1/2">
-      <span class="label text-xs">Dice</span>
-      <input class="text-xs" v-model="item.dice" />
-    </label>
+    <template v-if="item.kind === EffectKind.WEAPON">
+      <label class="label text-xs">
+        <input type="checkbox" class="checkbox checkbox-xs" v-model="item.ranged" />
+        Ranged
+      </label>
+      <div class="min-w-max border rounded-sm border-gray-300 flex flex-row flex-grow">
+        <span class="px-3 label text-xs my-1 border-gray-100">Str x</span>
+        <NumberInput class="ml-auto" size="sm" :step="0.5" v-model="item.strMod" />
+      </div>
+      <label class="input input-sm">
+        <span class="label text-xs">Dice</span>
+        <input class="text-xs" v-model="item.dice" />
+      </label>
+    </template>
   </Effect>
 </template>
 <style scoped></style>
