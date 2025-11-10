@@ -43,10 +43,9 @@ function performAction(action: Action) {
     <button class="btn btn-ghost btn-square" @click="toggleMenu">
       <i class="fas fa-ellipsis-vertical text-xl"></i>
     </button>
-    <div class="absolute right-0 w-40 z-10 pt-1">
+    <div v-if="open" class="absolute right-0 w-40 z-10 pt-1">
       <ul
-        v-if="open"
-        class="relative border rounded-field border-base-300 right-0 w-full bg-base-200 z-10 shadow-md py-1"
+        class="relative border rounded-field border-base-300 right-0 w-full bg-base-100 z-10 shadow-md py-1"
       >
         <li
           v-for="action in actions"
