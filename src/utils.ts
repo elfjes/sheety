@@ -1,3 +1,7 @@
+import type { ApplicationDataV3 } from "./types";
+
+const LOCAL_STORAGE_KEY = "character";
+
 export function signedInt(value: number): string {
   return value >= 0 ? `+${value}` : "" + value;
 }
@@ -21,4 +25,25 @@ export function b64encode(text: string) {
 }
 export function b64decode(text: string) {
   return new TextDecoder().decode(base64ToBytes(text));
+}
+
+export function saveToLocalStorage(data: ApplicationDataV3) {
+  localStorage.setItem(LOCAL_STORAGE_KEY, serialize(data));
+}
+export function loadFromLocalStorage(): unknown {
+  const result = localStorage.getItem(LOCAL_STORAGE_KEY);
+  if (!result) return null;
+  return deserialize(result);
+}
+export function serialize(data: unknown) {
+  return b64encode(JSON.stringify(data));
+}
+
+export function deserialize(text: string) {
+  try {
+    const parsed = JSON.parse(b64decode(text));
+    return parsed as unknown;
+  } catch {
+    return null;
+  }
 }

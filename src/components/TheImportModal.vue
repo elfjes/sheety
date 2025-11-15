@@ -3,7 +3,7 @@ import { computed, ref } from "vue";
 import Modal from "./Modal.vue";
 import { useCharacterStore } from "@/stores/character";
 
-const { open } = defineProps<{ open: boolean; mode: "import" | "export" }>();
+const { open } = defineProps<{ open: boolean }>();
 const emit = defineEmits<{
   (e: "update:open", val: boolean): void;
 }>();

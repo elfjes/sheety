@@ -7,11 +7,13 @@ import {
   type AbilityT,
   type ApplicationDataV3,
   type Attack,
+  type CharacterLevel,
   type CharacterSheetV2,
   type ConditionalModifiers,
   type Effect,
   type EffectDetails,
   type EffectTarget,
+  type Item,
   type NumericEffectDetails,
   type NumericEffectTargetT,
   type SavesStats,
@@ -23,32 +25,199 @@ import {
 } from "@/types";
 
 import { computed, ref, watch } from "vue";
-import { b64decode, b64encode, hasOwnProperty } from "@/utils";
+import {
+  hasOwnProperty,
+  loadFromLocalStorage,
+  serialize,
+  deserialize,
+  saveToLocalStorage,
+} from "@/utils";
 import { migrateApplicationData, migrateCharacter } from "@/migrate";
-const LOCAL_STORAGE_KEY = "character";
-
-function saveToLocalStorage(data: ApplicationDataV3) {
-  localStorage.setItem(LOCAL_STORAGE_KEY, serialize(data));
-}
-function loadFromLocalStorage(): unknown {
-  const result = localStorage.getItem(LOCAL_STORAGE_KEY);
-  if (!result) return null;
-  return deserialize(result);
-}
-function serialize(data: unknown) {
-  return b64encode(JSON.stringify(data));
-}
-
-function deserialize(text: string) {
-  try {
-    const parsed = JSON.parse(b64decode(text));
-    return parsed as unknown;
-  } catch {
-    return null;
-  }
-}
 function scoreToMod(score: number) {
   return Math.floor((score - 10) / 2);
+}
+
+class Character {
+  schemaVersion: "v2";
+  name: string;
+  levels: CharacterLevel[];
+  hitpointEvents: number[];
+  baseAbilityScores: Record<AbilityT, number>;
+  abilities: Effect[];
+  baseSaves: Record<SaveT, number>;
+  items: Item[];
+  temporaryEffects: Effect[];
+  constructor(data?: CharacterSheetV2) {
+    data = data ?? defaultCharacterSheet();
+    this.schemaVersion = "v2";
+    this.name = data.name;
+    this.levels = data.levels;
+    this.hitpointEvents = data.hitpointEvents;
+    this.baseAbilityScores = data.abilityScores;
+    this.abilities = data.abilities;
+    this.baseSaves = data.baseSaves;
+    ((this.items = data.items), (this.temporaryEffects = data.temporaryEffects));
+  }
+  classLevels(): Record<string, number> {
+    return this.levels.reduce(
+      (obj, lvl) => {
+        obj[lvl.class] ??= 0;
+        obj[lvl.class]! += 1;
+
+        return obj;
+      },
+      {} as Record<string, number>,
+    );
+  }
+  updateBaseAbilityScore(ability: AbilityT, newScore: number | string) {
+    this.baseAbilityScores[ability] = typeof newScore == "string" ? parseInt(newScore) : newScore;
+  }
+  updateBaseSave(save: SaveT, newScore: number | string) {
+    this.baseSaves[save] = typeof newScore == "string" ? parseInt(newScore) : newScore;
+  }
+  resetHitpoints() {
+    this.hitpointEvents.splice(0);
+  }
+  abilityScores(): Record<AbilityT, SingleAbiiltyStats> {
+    return {
+      str: getAbilityStats(Ability.STR, this),
+      dex: getAbilityStats(Ability.DEX, this),
+      con: getAbilityStats(Ability.CON, this),
+      int: getAbilityStats(Ability.INT, this),
+      wis: getAbilityStats(Ability.WIS, this),
+      cha: getAbilityStats(Ability.CHA, this),
+    };
+  }
+  hitpoints(): { min: number; max: number; current: number; events: number[] } {
+    const baseHitpoints = this.levels.reduce(
+      (curr, lvl) => curr + lvl.hitpoints + Number(lvl.favored_class_hp),
+      0,
+    );
+    const abilityScores = this.abilityScores();
+    const maxHitpoints =
+      baseHitpoints +
+      abilityScores.con.mod * this.levels.length +
+      getTotalEffectModifier("hp", relevantEffects(this));
+    return {
+      max: maxHitpoints,
+      min: -abilityScores.con.score,
+      current: (this.hitpointEvents ?? []).reduce(
+        (total, current) => total + current,
+        maxHitpoints,
+      ),
+      events: this.hitpointEvents,
+    };
+  }
+  saves(): SavesStats {
+    const abilityScores = this.abilityScores();
+    return {
+      fort: getSaveStats(Save.FORT, abilityScores.con.mod, this),
+      reflex: getSaveStats(Save.REFLEX, abilityScores.dex.mod, this),
+      will: getSaveStats(Save.WILL, abilityScores.wis.mod, this),
+    };
+  }
+  baseAttack(): number {
+    return this.levels.reduce((curr, lvl) => Number(lvl.baseAttack) + curr, 0);
+  }
+  ac() {
+    const abilityScores = this.abilityScores();
+    const armorEffects = relevantEffects(this, (e) => e.kind === EffectKind.ARMOR);
+    const shieldEffects = relevantEffects(this, (e) => e.kind === EffectKind.SHIELD);
+    const otherEffects = relevantEffects(
+      this,
+      (e) => e.kind !== EffectKind.ARMOR && e.kind !== EffectKind.SHIELD,
+    );
+
+    const allEffects = [...armorEffects, ...shieldEffects, ...otherEffects];
+    const overallMod = getTotalEffectModifier("ac", allEffects);
+    const touchMod = getTotalEffectModifier("touchAc", allEffects);
+    const armorMod = getTotalEffectModifier("armorAc", [...armorEffects, ...otherEffects]);
+    const shieldMod = getTotalEffectModifier("shieldAc", [...shieldEffects, ...otherEffects]);
+
+    return {
+      ac: {
+        value: 10 + overallMod + abilityScores.dex.mod + armorMod + shieldMod + touchMod,
+        conditional: getConditionalModifiers(["ac", "touchAc", "armorAc", "shieldAc"], allEffects),
+      },
+      touch: {
+        value: 10 + overallMod + abilityScores.dex.mod + touchMod,
+        conditional: getConditionalModifiers(["ac", "touchAc"], allEffects),
+      },
+      flatfooted: {
+        value: 10 + overallMod + armorMod + shieldMod,
+        conditional: getConditionalModifiers(["ac", "armorAc", "shieldAc"], allEffects),
+      },
+    };
+  }
+  attacks(): Attack[] {
+    const baseAttack = this.baseAttack();
+    const abilityScores = this.abilityScores();
+
+    return this.items
+      .filter((item): item is Weapon => item.kind === EffectKind.WEAPON)
+      .filter((item) => item.active)
+      .map((wpn: Weapon) => {
+        const effects = [
+          ...wpn.details,
+          ...relevantEffects(this!, (e) => e.kind !== EffectKind.WEAPON, wpn.tags),
+        ];
+        const adjustedBaseAttack = baseAttack + getTotalEffectModifier("baseAttack", effects);
+        const fullAttackBase = attacksFromBaseAttack(adjustedBaseAttack);
+
+        const attackBonus =
+          (wpn.ranged ? abilityScores.dex.mod : abilityScores.str.mod) +
+          getEffectModifier(getEffectsForTarget("attack", effects) as NumericEffectDetails[]);
+        for (const effect of getEffectsForTarget(
+          "extraAttack",
+          effects,
+        ) as NumericEffectDetails[]) {
+          fullAttackBase.push(adjustedBaseAttack + effect.modifier);
+        }
+        fullAttackBase.sort().reverse();
+        return {
+          name: wpn.name,
+          attack: adjustedBaseAttack + attackBonus,
+          fullAttack: fullAttackBase.map((att) => att + attackBonus),
+          dice: wpn.dice,
+          damage:
+            Math.floor(abilityScores.str.mod * wpn.strMod) +
+            getEffectModifier(getEffectsForTarget("damage", effects) as NumericEffectDetails[]),
+          extraDice: (
+            getEffectsForTarget("damageDie", effects).filter(
+              (e) => !e.conditional,
+            ) as TextEffectDetails[]
+          )
+            .map((e) => e.value)
+            .join(" + "),
+          conditionalAttack: getConditionalModifiers("attack", effects),
+          conditionalDamage: getEffectsForTarget(["damage", "damageDie"], effects)
+            .filter((e) => e.conditional)
+            .map((e) => {
+              console.log(e);
+              return {
+                condition: e.conditional!,
+                modifier: hasOwnProperty(e, "modifier")
+                  ? (e as NumericEffectDetails).modifier
+                  : (e as TextEffectDetails).value,
+              };
+            }),
+        };
+      });
+  }
+
+  dump(): CharacterSheetV2 {
+    return {
+      schemaVersion: this.schemaVersion,
+      name: this.name,
+      levels: this.levels,
+      hitpointEvents: this.hitpointEvents,
+      abilityScores: this.baseAbilityScores,
+      abilities: this.abilities,
+      baseSaves: this.baseSaves,
+      items: this.items,
+      temporaryEffects: this.temporaryEffects,
+    };
+  }
 }
 
 function defaultApplicationData(): ApplicationDataV3 {
@@ -58,7 +227,7 @@ function defaultApplicationData(): ApplicationDataV3 {
     currentCharacter: null,
   };
 }
-function defaultCharacter(): CharacterSheetV2 {
+function defaultCharacterSheet(): CharacterSheetV2 {
   return {
     schemaVersion: "v2",
     name: "MyHero",
@@ -83,7 +252,7 @@ function defaultCharacter(): CharacterSheetV2 {
   };
 }
 function relevantEffects(
-  character: CharacterSheetV2,
+  character: Character,
   filter?: (effect: Effect) => boolean,
   matchTags?: string[],
 ): EffectDetails[] {
@@ -205,8 +374,8 @@ function getTotalEffectModifier(
   return getEffectModifier(getEffectsForTarget(target, effects) as NumericEffectDetails[]);
 }
 
-function getAbilityStats(ability: AbilityT, character: CharacterSheetV2): SingleAbiiltyStats {
-  const baseScore = character.abilityScores[ability];
+function getAbilityStats(ability: AbilityT, character: Character): SingleAbiiltyStats {
+  const baseScore = character.baseAbilityScores[ability];
   const effects = relevantEffects(character);
   const score = getTotalEffectModifier(ability, effects) + baseScore;
   return {
@@ -216,11 +385,7 @@ function getAbilityStats(ability: AbilityT, character: CharacterSheetV2): Single
   };
 }
 
-function getSaveStats(
-  save: SaveT,
-  abilityModifier: number,
-  character: CharacterSheetV2,
-): SingleSaveStats {
+function getSaveStats(save: SaveT, abilityModifier: number, character: Character): SingleSaveStats {
   const baseSave = character.baseSaves[save];
   const effects = relevantEffects(character);
 
@@ -252,14 +417,15 @@ export const useCharacterStore = defineStore("character", () => {
     applicationData.value = data ?? defaultApplicationData();
   }
 
-  const character = computed<CharacterSheetV2 | null>(() => {
+  const activeCharacter = computed<Character | null>(() => {
     if (applicationData.value.currentCharacter == null) return null;
-    return applicationData.value.characters[applicationData.value.currentCharacter] ?? null;
+    const characterSheet = applicationData.value.characters[applicationData.value.currentCharacter];
+    return characterSheet ? new Character(characterSheet) : null;
   });
 
   const characterAsExport = computed(() => {
-    if (!character.value) return "";
-    return serialize(character.value);
+    if (!activeCharacter.value) return "";
+    return serialize(activeCharacter.value.dump());
   });
 
   function importCharacter(text: string): boolean {
@@ -270,96 +436,50 @@ export const useCharacterStore = defineStore("character", () => {
     applicationData.value.characters.push(character);
     return true;
   }
+
   function newCharacter(character?: CharacterSheetV2) {
     if (character) {
       applicationData.value.characters.push(character);
     } else {
-      applicationData.value.characters.push(defaultCharacter());
+      applicationData.value.characters.push(defaultCharacterSheet());
     }
   }
+
   function updateBaseAbilityScore(ability: AbilityT, newScore: number | string) {
-    if (!character.value) return;
-    character.value.abilityScores[ability] =
-      typeof newScore == "string" ? parseInt(newScore) : newScore;
+    if (!activeCharacter.value) return;
+    activeCharacter.value.updateBaseAbilityScore(ability, newScore);
   }
+
   function updateBaseSave(save: SaveT, newScore: number | string) {
-    if (!character.value) return;
-    character.value.baseSaves[save] = typeof newScore == "string" ? parseInt(newScore) : newScore;
+    if (!activeCharacter.value) return;
+    activeCharacter.value.updateBaseSave(save, newScore);
   }
+
   function resetHitpoints() {
-    if (!character.value) return;
-    character.value.hitpointEvents?.splice(0);
+    if (!activeCharacter.value) return;
+    activeCharacter.value.hitpointEvents?.splice(0);
   }
 
   const classLevels = computed(() => {
-    if (!character.value) return {} as Record<string, number>;
-    return character.value.levels.reduce(
-      (obj, lvl) => {
-        obj[lvl.class] ??= 0;
-        obj[lvl.class]! += 1;
-
-        return obj;
-      },
-      {} as Record<string, number>,
-    );
+    return (activeCharacter.value ?? new Character()).classLevels();
   });
+
   const hitpoints = computed(
     (): { min: number; max: number; current: number; events: number[] } => {
-      if (!character.value) return { min: 0, max: 0, current: 0, events: [] };
-      const baseHitpoints = character.value.levels.reduce(
-        (curr, lvl) => curr + lvl.hitpoints + Number(lvl.favored_class_hp),
-        0,
-      );
-      const maxHitpoints =
-        baseHitpoints +
-        abilityScores.value.con.mod * character.value.levels.length +
-        getTotalEffectModifier("hp", relevantEffects(character.value));
-      return {
-        max: maxHitpoints,
-        min: -abilityScores.value.con.score,
-        current: (character.value.hitpointEvents ?? []).reduce(
-          (total, current) => total + current,
-          maxHitpoints,
-        ),
-        events: character.value.hitpointEvents,
-      };
+      return (activeCharacter.value ?? new Character()).hitpoints();
     },
   );
+
   const abilityScores = computed((): AbilityStats => {
-    if (!character.value)
-      return {
-        str: { base: 10, score: 10, mod: 10 },
-        dex: { base: 10, score: 10, mod: 10 },
-        con: { base: 10, score: 10, mod: 10 },
-        int: { base: 10, score: 10, mod: 10 },
-        wis: { base: 10, score: 10, mod: 10 },
-        cha: { base: 10, score: 10, mod: 10 },
-      };
-    return {
-      str: getAbilityStats(Ability.STR, character.value),
-      dex: getAbilityStats(Ability.DEX, character.value),
-      con: getAbilityStats(Ability.CON, character.value),
-      int: getAbilityStats(Ability.INT, character.value),
-      wis: getAbilityStats(Ability.WIS, character.value),
-      cha: getAbilityStats(Ability.CHA, character.value),
-    };
+    return (activeCharacter.value ?? new Character()).abilityScores();
   });
+
   const saves = computed((): SavesStats => {
-    if (!character.value)
-      return {
-        fort: { base: 0, score: 0, conditional: [] },
-        reflex: { base: 0, score: 0, conditional: [] },
-        will: { base: 0, score: 0, conditional: [] },
-      };
-    return {
-      fort: getSaveStats(Save.FORT, abilityScores.value.con.mod, character.value),
-      reflex: getSaveStats(Save.REFLEX, abilityScores.value.dex.mod, character.value),
-      will: getSaveStats(Save.WILL, abilityScores.value.wis.mod, character.value),
-    };
+    return (activeCharacter.value ?? new Character()).saves();
   });
+
   const baseAttack = computed((): number => {
-    if (!character.value) return 0;
-    return character.value.levels.reduce((curr, lvl) => Number(lvl.baseAttack) + curr, 0);
+    return (activeCharacter.value ?? new Character()).baseAttack();
   });
   const ac = computed(
     (): {
@@ -376,107 +496,11 @@ export const useCharacterStore = defineStore("character", () => {
         conditional: ConditionalModifiers<number>;
       };
     } => {
-      if (!character.value) {
-        return {
-          ac: {
-            value: 10,
-            conditional: [],
-          },
-          touch: {
-            value: 10,
-            conditional: [],
-          },
-          flatfooted: {
-            value: 10,
-            conditional: [],
-          },
-        };
-      }
-      const armorEffects = relevantEffects(character.value, (e) => e.kind === EffectKind.ARMOR);
-      const shieldEffects = relevantEffects(character.value, (e) => e.kind === EffectKind.SHIELD);
-      const otherEffects = relevantEffects(
-        character.value,
-        (e) => e.kind !== EffectKind.ARMOR && e.kind !== EffectKind.SHIELD,
-      );
-
-      const allEffects = [...armorEffects, ...shieldEffects, ...otherEffects];
-      const overallMod = getTotalEffectModifier("ac", allEffects);
-      const touchMod = getTotalEffectModifier("touchAc", allEffects);
-      const armorMod = getTotalEffectModifier("armorAc", [...armorEffects, ...otherEffects]);
-      const shieldMod = getTotalEffectModifier("shieldAc", [...shieldEffects, ...otherEffects]);
-
-      return {
-        ac: {
-          value: 10 + overallMod + abilityScores.value.dex.mod + armorMod + shieldMod + touchMod,
-          conditional: getConditionalModifiers(
-            ["ac", "touchAc", "armorAc", "shieldAc"],
-            allEffects,
-          ),
-        },
-        touch: {
-          value: 10 + overallMod + abilityScores.value.dex.mod + touchMod,
-          conditional: getConditionalModifiers(["ac", "touchAc"], allEffects),
-        },
-        flatfooted: {
-          value: 10 + overallMod + armorMod + shieldMod,
-          conditional: getConditionalModifiers(["ac", "armorAc", "shieldAc"], allEffects),
-        },
-      };
+      return (activeCharacter.value ?? new Character()).ac();
     },
   );
   const attacks = computed((): Attack[] => {
-    if (!character.value) return [];
-
-    return character.value.items
-      .filter((item): item is Weapon => item.kind === EffectKind.WEAPON)
-      .filter((item) => item.active)
-      .map((wpn: Weapon) => {
-        const effects = [
-          ...wpn.details,
-          ...relevantEffects(character.value!, (e) => e.kind !== EffectKind.WEAPON, wpn.tags),
-        ];
-        const adjustedBaseAttack = baseAttack.value + getTotalEffectModifier("baseAttack", effects);
-        const fullAttackBase = attacksFromBaseAttack(adjustedBaseAttack);
-
-        const attackBonus =
-          (wpn.ranged ? abilityScores.value.dex.mod : abilityScores.value.str.mod) +
-          getEffectModifier(getEffectsForTarget("attack", effects) as NumericEffectDetails[]);
-        for (const effect of getEffectsForTarget(
-          "extraAttack",
-          effects,
-        ) as NumericEffectDetails[]) {
-          fullAttackBase.push(adjustedBaseAttack + effect.modifier);
-        }
-        fullAttackBase.sort().reverse();
-        return {
-          name: wpn.name,
-          attack: adjustedBaseAttack + attackBonus,
-          fullAttack: fullAttackBase.map((att) => att + attackBonus),
-          dice: wpn.dice,
-          damage:
-            Math.floor(abilityScores.value.str.mod * wpn.strMod) +
-            getEffectModifier(getEffectsForTarget("damage", effects) as NumericEffectDetails[]),
-          extraDice: (
-            getEffectsForTarget("damageDie", effects).filter(
-              (e) => !e.conditional,
-            ) as TextEffectDetails[]
-          )
-            .map((e) => e.value)
-            .join(" + "),
-          conditionalAttack: getConditionalModifiers("attack", effects),
-          conditionalDamage: getEffectsForTarget(["damage", "damageDie"], effects)
-            .filter((e) => e.conditional)
-            .map((e) => {
-              console.log(e);
-              return {
-                condition: e.conditional!,
-                modifier: hasOwnProperty(e, "modifier")
-                  ? (e as NumericEffectDetails).modifier
-                  : (e as TextEffectDetails).value,
-              };
-            }),
-        };
-      });
+    return (activeCharacter.value ?? new Character()).attacks();
   });
   watch(
     applicationData,
@@ -487,7 +511,7 @@ export const useCharacterStore = defineStore("character", () => {
   );
   initialize();
   return {
-    character,
+    character: activeCharacter,
     updateBaseAbilityScore,
     updateBaseSave,
     resetHitpoints,

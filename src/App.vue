@@ -1,14 +1,25 @@
 <script setup lang="ts">
-import { ref, useTemplateRef } from "vue";
+import { reactive, ref, useTemplateRef } from "vue";
 import { RouterView, RouterLink } from "vue-router";
 import { useCharacterStore } from "./stores/character";
 import ActionMenu from "./components/ActionMenu.vue";
 import TheImportModal from "./components/TheImportModal.vue";
 import TheExportModal from "./components/TheExportModal.vue";
+import Modal from "./components/Modal.vue";
 
-const open = ref(false);
-const importModalOpen = ref(false);
-const exportModalOpen = ref(false);
+enum ModalKey {
+  IMPORT = "import",
+  EXPORT = "export",
+  CHARACTER = "character",
+}
+
+const hamburgerMenuOpen = ref(false);
+const openModals = reactive<Record<ModalKey, boolean>>({
+  import: false,
+  export: false,
+  character: false,
+});
+
 const editingName = ref(false);
 const store = useCharacterStore();
 const navItems = [
@@ -20,6 +31,10 @@ const navItems = [
 ];
 
 const menuItems = [
+  {
+    title: "Characters",
+    event: "characters",
+  },
   {
     title: "Edit name",
     event: "edit",
@@ -34,54 +49,52 @@ const menuItems = [
   },
 ];
 
-const modal = useTemplateRef<InstanceType<typeof TheImportModal>>("modal");
-const exporting = ref(false);
-const modalOpen = ref({
-  import: false,
-  export: false,
-});
-function openModal(modal: "import" | "export") {
-  const importOpen = modal === "import";
-  importModalOpen.value = importOpen;
-  exportModalOpen.value = !importOpen;
+function openModal(modal: ModalKey) {
+  for (const key of Object.keys(openModals)) {
+    openModals[key as ModalKey] = false;
+  }
+  openModals[modal] = true;
 }
 </script>
 
 <template>
-  <TheImportModal v-model:open="importModalOpen" mode="import"></TheImportModal>
-  <TheExportModal v-model:open="exportModalOpen" mode="import"></TheExportModal>
+  <TheImportModal v-model:open="openModals[ModalKey.IMPORT]"></TheImportModal>
+  <TheExportModal v-model:open="openModals[ModalKey.EXPORT]"></TheExportModal>
   <header class="p-2 flex flex-col align-center bg-primary shadow-sm">
     <div class="flex flex-row gap-2 items-center">
       <div class="flex-none cursor-pointer">
         <div
           class="btn btn-ghost hover:bg-[color-mix(in_oklch,_var(--color-primary)_80%,_#ffffff)] btn-square"
-          @click="open = !open"
+          @click="hamburgerMenuOpen = !hamburgerMenuOpen"
         >
           <i class="fas fa-bars text-2xl"></i>
         </div>
       </div>
-      <template v-if="editingName">
-        <input class="input" v-model="store.character.name" />
-        <button class="btn btn-ghost btn-square" @click="editingName = false">
-          <i class="fas fa-check text-center w-8" />
-        </button>
+      <template v-if="store.character">
+        <template v-if="editingName">
+          <input class="input" v-model="store.character.name" />
+          <button class="btn btn-ghost btn-square" @click="editingName = false">
+            <i class="fas fa-check text-center w-8" />
+          </button>
+        </template>
+        <div v-else class="text-xl font-semibold">
+          {{ store.character.name }}
+        </div>
       </template>
-      <div v-else class="text-xl font-semibold">
-        {{ store.character.name }}
-      </div>
       <div class="ml-auto">
         <ActionMenu
           :actions="menuItems"
           @edit="editingName = true"
-          @import="openModal('import')"
-          @export="openModal('export')"
+          @import="openModal(ModalKey.IMPORT)"
+          @export="openModal(ModalKey.EXPORT)"
+          @characters="openModal(ModalKey.CHARACTER)"
         />
       </div>
     </div>
-    <div v-if="open">
+    <div v-if="hamburgerMenuOpen">
       <ul class="menu w-full text-lg">
-        <li v-for="item in navItems" @click="open = false">
-          <RouterLink :to="item.route">
+        <li v-for="item in navItems" @click="hamburgerMenuOpen = false">
+          <RouterLink :to="item.route" :disabled="!store.character">
             {{ item.title }}
           </RouterLink>
         </li>
@@ -90,7 +103,8 @@ function openModal(modal: "import" | "export") {
   </header>
 
   <div class="p-4">
-    <RouterView />
+    <RouterView v-if="store.character" />
+    <div v-else>Create a character to begin</div>
   </div>
 </template>
 

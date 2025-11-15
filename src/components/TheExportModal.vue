@@ -4,7 +4,7 @@ import Modal from "./Modal.vue";
 import { useCharacterStore } from "@/stores/character";
 import { storeToRefs } from "pinia";
 
-const { open } = defineProps<{ open: boolean; mode: "import" | "export" }>();
+const { open } = defineProps<{ open: boolean }>();
 const emit = defineEmits<{
   (e: "update:open", val: boolean): void;
 }>();
