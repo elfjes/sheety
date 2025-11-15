@@ -18,7 +18,7 @@ defineExpose({
 
 <template>
   <dialog ref="modal" class="modal" :open="open">
-    <div class="modal-box">
+    <div class="modal-box bg-base-100">
       <h3 class="text-lg font-bold">{{ header }}</h3>
       <slot></slot>
       <div class="modal-action">

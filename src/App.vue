@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { reactive, ref, useTemplateRef } from "vue";
-import { RouterView, RouterLink } from "vue-router";
-import { useCharacterStore } from "./stores/character";
+import { nextTick, reactive, ref, useTemplateRef } from "vue";
+import { RouterLink, RouterView } from "vue-router";
+
 import ActionMenu from "./components/ActionMenu.vue";
-import TheImportModal from "./components/TheImportModal.vue";
+import TheCharacterModal from "./components/TheCharacterModal.vue";
 import TheExportModal from "./components/TheExportModal.vue";
-import Modal from "./components/Modal.vue";
+import TheImportModal from "./components/TheImportModal.vue";
+import { useCharacterStore } from "./stores/character";
 
 enum ModalKey {
   IMPORT = "import",
@@ -13,6 +14,7 @@ enum ModalKey {
   CHARACTER = "character",
 }
 
+const store = useCharacterStore();
 const hamburgerMenuOpen = ref(false);
 const openModals = reactive<Record<ModalKey, boolean>>({
   import: false,
@@ -21,7 +23,9 @@ const openModals = reactive<Record<ModalKey, boolean>>({
 });
 
 const editingName = ref(false);
-const store = useCharacterStore();
+const characterNameInput = useTemplateRef("characterNameInput");
+
+const exportIndex = ref<number | null>(null);
 const navItems = [
   { title: "Character", route: "/character" },
   { title: "Skills", route: "/skills" },
@@ -39,14 +43,6 @@ const menuItems = [
     title: "Edit name",
     event: "edit",
   },
-  {
-    title: "Import",
-    event: "import",
-  },
-  {
-    title: "Export",
-    event: "export",
-  },
 ];
 
 function openModal(modal: ModalKey) {
@@ -55,11 +51,27 @@ function openModal(modal: ModalKey) {
   }
   openModals[modal] = true;
 }
+function editName() {
+  editingName.value = true;
+  nextTick(() => {
+    characterNameInput.value?.focus();
+  });
+}
+
+function exportCharacter(idx: number) {
+  exportIndex.value = idx;
+  openModal(ModalKey.EXPORT);
+}
 </script>
 
 <template>
   <TheImportModal v-model:open="openModals[ModalKey.IMPORT]"></TheImportModal>
-  <TheExportModal v-model:open="openModals[ModalKey.EXPORT]"></TheExportModal>
+  <TheExportModal v-model:open="openModals[ModalKey.EXPORT]" :index="exportIndex"></TheExportModal>
+  <TheCharacterModal
+    v-model:open="openModals[ModalKey.CHARACTER]"
+    @import="openModal(ModalKey.IMPORT)"
+    @export="(idx) => exportCharacter(idx)"
+  ></TheCharacterModal>
   <header class="p-2 flex flex-col align-center bg-primary shadow-sm">
     <div class="flex flex-row gap-2 items-center">
       <div class="flex-none cursor-pointer">
@@ -72,7 +84,7 @@ function openModal(modal: ModalKey) {
       </div>
       <template v-if="store.character">
         <template v-if="editingName">
-          <input class="input" v-model="store.character.name" />
+          <input ref="characterNameInput" class="input" v-model="store.character.name" />
           <button class="btn btn-ghost btn-square" @click="editingName = false">
             <i class="fas fa-check text-center w-8" />
           </button>
@@ -84,7 +96,7 @@ function openModal(modal: ModalKey) {
       <div class="ml-auto">
         <ActionMenu
           :actions="menuItems"
-          @edit="editingName = true"
+          @edit="editName"
           @import="openModal(ModalKey.IMPORT)"
           @export="openModal(ModalKey.EXPORT)"
           @characters="openModal(ModalKey.CHARACTER)"

@@ -1,11 +1,13 @@
 <script setup lang="ts">
+import { computed, ref } from "vue";
+import { storeToRefs } from "pinia";
 import { useCharacterStore } from "@/stores/character";
 import { Ability, Save, type CharacterLevel } from "@/types";
-import { storeToRefs } from "pinia";
-import NumberInput from "@/components/NumberInput.vue";
+
 import { signedInt } from "@/utils";
+
+import NumberInput from "@/components/NumberInput.vue";
 import Card from "@/components/Card.vue";
-import { computed, ref } from "vue";
 
 const store = useCharacterStore();
 const { abilityScores, saves, hitpoints, classLevels, character } = storeToRefs(store);
@@ -22,7 +24,7 @@ function confirmDelete(idx: number) {
     deleting.value = true;
     return;
   }
-  character.value.levels.splice(idx, 1);
+  character.value?.levels.splice(idx, 1);
   deleting.value = false;
 }
 function defaultLevel(): CharacterLevel {
@@ -35,11 +37,11 @@ function defaultLevel(): CharacterLevel {
   };
 }
 function newLevel() {
-  character.value.levels.push(defaultLevel());
+  character.value?.levels.push(defaultLevel());
 }
 </script>
 <template>
-  <div class="flex flex-col gap-1">
+  <div v-if="character" class="flex flex-col gap-1">
     <Card collapse v-model:open="levelsOpen">
       <template #header>
         <h2 class="text-lg font-bold">Classes ({{ lvlString }})</h2>
@@ -137,5 +139,6 @@ function newLevel() {
       </div>
     </Card>
   </div>
+  <div v-else>Please select or create a character</div>
 </template>
 <style scoped></style>

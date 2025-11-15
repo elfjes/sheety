@@ -49,7 +49,7 @@ function performAction(action: Action) {
       >
         <li
           v-for="action in actions"
-          class="text-lg font-medium w-full cursor-pointer hover:bg-neutral-content px-2 py-1"
+          class="text-lg font-medium w-full cursor-pointer hover:bg-base-200 px-2 py-1"
         >
           <a @click="performAction(action)">{{ action.title }}</a>
         </li>

@@ -1,23 +1,25 @@
 <script setup lang="ts">
-import { computed, ref, useTemplateRef } from "vue";
-import Modal from "./Modal.vue";
-import { useCharacterStore } from "@/stores/character";
-import { storeToRefs } from "pinia";
+import { computed, ref } from "vue";
 
-const { open } = defineProps<{ open: boolean }>();
+import { useCharacterStore } from "@/stores/character";
+
+import Modal from "./Modal.vue";
+
+const { open, index } = defineProps<{ open: boolean; index: number | null }>();
 const emit = defineEmits<{
   (e: "update:open", val: boolean): void;
 }>();
-const { characterAsExport } = storeToRefs(useCharacterStore());
-
+const store = useCharacterStore();
 const isSuccess = ref(false);
-const textarea = useTemplateRef("textarea");
+const exportData = computed(() => {
+  return index != null ? store.characterAsExport(index) : "";
+});
 function onCopy() {
   if (isSuccess.value) {
     close();
     return;
   }
-  navigator.clipboard.writeText(characterAsExport.value);
+  navigator.clipboard.writeText(exportData.value);
   isSuccess.value = true;
 }
 
@@ -33,11 +35,10 @@ function close() {
   <Modal header="Export Character Sheet" :open="open" @update:open="(v) => emit('update:open', v)">
     <p class="mb-1">Press Copy to export your Character Sheet:</p>
     <textarea
-      ref="textarea"
       class="textarea w-full min-h-50"
       onclick="this.focus();this.select()"
       readonly
-      :value="characterAsExport"
+      :value="exportData"
     />
     <template #buttons>
       <button

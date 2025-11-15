@@ -1,9 +1,9 @@
 import { setActivePinia, createPinia } from "pinia";
 import { useCharacterStore } from "./character";
 import { describe, test, beforeEach, expect } from "vitest";
-import { EffectKind, type CharacterSheet } from "@/types";
+import { EffectKind, type CharacterSheetV2 } from "@/types";
 
-function defaultCharacter(): CharacterSheet {
+function defaultCharacter(): CharacterSheetV2 {
   return {
     schemaVersion: "v2",
     name: "TestHero",
