@@ -24,7 +24,7 @@ export interface CharacterSheetV1 {
   items: Item[];
   temporaryEffects: Effect[];
 }
-export interface CharacterSheet {
+export interface CharacterSheetV2 {
   schemaVersion: "v2";
   name: string;
   levels: CharacterLevel[];
@@ -34,6 +34,11 @@ export interface CharacterSheet {
   baseSaves: Record<SaveT, number>;
   items: Item[];
   temporaryEffects: Effect[];
+}
+export interface ApplicationDataV3 {
+  schemaVersion: "v3";
+  characters: CharacterSheetV2[];
+  currentCharacter: number | null;
 }
 export interface CharacterLevel {
   class: string;
@@ -150,3 +155,10 @@ export interface SingleSaveStats {
   conditional: ConditionalModifiers<number>;
 }
 export type SavesStats = Record<SaveT, SingleSaveStats>;
+
+export interface SingleAbiiltyStats {
+  base: number;
+  score: number;
+  mod: number;
+}
+export type AbilityStats = Record<AbilityT, SingleAbiiltyStats>;

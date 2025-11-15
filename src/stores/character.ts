@@ -3,10 +3,11 @@ import {
   Ability,
   EffectKind,
   Save,
+  type AbilityStats,
   type AbilityT,
+  type ApplicationDataV3,
   type Attack,
-  type CharacterSheet,
-  type CharacterSheetV1,
+  type CharacterSheetV2,
   type ConditionalModifiers,
   type Effect,
   type EffectDetails,
@@ -15,6 +16,7 @@ import {
   type NumericEffectTargetT,
   type SavesStats,
   type SaveT,
+  type SingleAbiiltyStats,
   type SingleSaveStats,
   type TextEffectDetails,
   type Weapon,
@@ -22,25 +24,25 @@ import {
 
 import { computed, ref, watch } from "vue";
 import { b64decode, b64encode, hasOwnProperty } from "@/utils";
-import { migrateCharacterV1V2 } from "@/migrate";
+import { migrateApplicationData, migrateCharacter } from "@/migrate";
 const LOCAL_STORAGE_KEY = "character";
 
-function saveToLocalStorage(character: CharacterSheet) {
-  localStorage.setItem(LOCAL_STORAGE_KEY, serialize(character));
+function saveToLocalStorage(data: ApplicationDataV3) {
+  localStorage.setItem(LOCAL_STORAGE_KEY, serialize(data));
 }
 function loadFromLocalStorage(): unknown {
   const result = localStorage.getItem(LOCAL_STORAGE_KEY);
   if (!result) return null;
   return deserialize(result);
 }
-function serialize(character: CharacterSheet) {
-  return b64encode(JSON.stringify(character));
+function serialize(data: unknown) {
+  return b64encode(JSON.stringify(data));
 }
 
 function deserialize(text: string) {
   try {
     const parsed = JSON.parse(b64decode(text));
-    return parsed as CharacterSheet;
+    return parsed as unknown;
   } catch {
     return null;
   }
@@ -49,7 +51,14 @@ function scoreToMod(score: number) {
   return Math.floor((score - 10) / 2);
 }
 
-function defaultCharacter(): CharacterSheet {
+function defaultApplicationData(): ApplicationDataV3 {
+  return {
+    schemaVersion: "v3",
+    characters: [],
+    currentCharacter: null,
+  };
+}
+function defaultCharacter(): CharacterSheetV2 {
   return {
     schemaVersion: "v2",
     name: "MyHero",
@@ -73,16 +82,8 @@ function defaultCharacter(): CharacterSheet {
     temporaryEffects: [],
   };
 }
-function isCharacterSheetV1(obj: unknown): obj is CharacterSheetV1 {
-  return (
-    (obj as CharacterSheetV1).schemaVersion && (obj as CharacterSheetV1).schemaVersion === "v1"
-  );
-}
-function isCharacterSheet(obj: unknown): obj is CharacterSheet {
-  return (obj as CharacterSheet).schemaVersion && (obj as CharacterSheet).schemaVersion === "v2";
-}
 function relevantEffects(
-  character: CharacterSheet,
+  character: CharacterSheetV2,
   filter?: (effect: Effect) => boolean,
   matchTags?: string[],
 ): EffectDetails[] {
@@ -204,7 +205,7 @@ function getTotalEffectModifier(
   return getEffectModifier(getEffectsForTarget(target, effects) as NumericEffectDetails[]);
 }
 
-function getAbilityStats(ability: AbilityT, character: CharacterSheet) {
+function getAbilityStats(ability: AbilityT, character: CharacterSheetV2): SingleAbiiltyStats {
   const baseScore = character.abilityScores[ability];
   const effects = relevantEffects(character);
   const score = getTotalEffectModifier(ability, effects) + baseScore;
@@ -218,7 +219,7 @@ function getAbilityStats(ability: AbilityT, character: CharacterSheet) {
 function getSaveStats(
   save: SaveT,
   abilityModifier: number,
-  character: CharacterSheet,
+  character: CharacterSheetV2,
 ): SingleSaveStats {
   const baseSave = character.baseSaves[save];
   const effects = relevantEffects(character);
@@ -242,43 +243,56 @@ function attacksFromBaseAttack(bab: number) {
   return result;
 }
 export const useCharacterStore = defineStore("character", () => {
-  const character = ref<CharacterSheet>(defaultCharacter());
+  const applicationData = ref<ApplicationDataV3>(defaultApplicationData());
 
   function initialize() {
-    let result = loadFromLocalStorage() || defaultCharacter();
+    let result = loadFromLocalStorage() || defaultApplicationData();
 
-    if (isCharacterSheetV1(result)) {
-      result = migrateCharacterV1V2(result);
-    }
-    if (isCharacterSheet(result)) {
-      character.value = result;
-      return;
-    }
-    character.value = defaultCharacter();
+    const data = migrateApplicationData(result);
+    applicationData.value = data ?? defaultApplicationData();
   }
+
+  const character = computed<CharacterSheetV2 | null>(() => {
+    if (applicationData.value.currentCharacter == null) return null;
+    return applicationData.value.characters[applicationData.value.currentCharacter] ?? null;
+  });
 
   const characterAsExport = computed(() => {
+    if (!character.value) return "";
     return serialize(character.value);
   });
+
   function importCharacter(text: string): boolean {
     const result = deserialize(text);
-    if (!result || !isCharacterSheet(result)) return false;
-    character.value = result;
+    const character = migrateCharacter(result);
+    if (!character) return false;
+
+    applicationData.value.characters.push(character);
     return true;
   }
-
+  function newCharacter(character?: CharacterSheetV2) {
+    if (character) {
+      applicationData.value.characters.push(character);
+    } else {
+      applicationData.value.characters.push(defaultCharacter());
+    }
+  }
   function updateBaseAbilityScore(ability: AbilityT, newScore: number | string) {
+    if (!character.value) return;
     character.value.abilityScores[ability] =
       typeof newScore == "string" ? parseInt(newScore) : newScore;
   }
   function updateBaseSave(save: SaveT, newScore: number | string) {
+    if (!character.value) return;
     character.value.baseSaves[save] = typeof newScore == "string" ? parseInt(newScore) : newScore;
   }
   function resetHitpoints() {
+    if (!character.value) return;
     character.value.hitpointEvents?.splice(0);
   }
 
   const classLevels = computed(() => {
+    if (!character.value) return {} as Record<string, number>;
     return character.value.levels.reduce(
       (obj, lvl) => {
         obj[lvl.class] ??= 0;
@@ -291,6 +305,7 @@ export const useCharacterStore = defineStore("character", () => {
   });
   const hitpoints = computed(
     (): { min: number; max: number; current: number; events: number[] } => {
+      if (!character.value) return { min: 0, max: 0, current: 0, events: [] };
       const baseHitpoints = character.value.levels.reduce(
         (curr, lvl) => curr + lvl.hitpoints + Number(lvl.favored_class_hp),
         0,
@@ -310,7 +325,16 @@ export const useCharacterStore = defineStore("character", () => {
       };
     },
   );
-  const abilityScores = computed(() => {
+  const abilityScores = computed((): AbilityStats => {
+    if (!character.value)
+      return {
+        str: { base: 10, score: 10, mod: 10 },
+        dex: { base: 10, score: 10, mod: 10 },
+        con: { base: 10, score: 10, mod: 10 },
+        int: { base: 10, score: 10, mod: 10 },
+        wis: { base: 10, score: 10, mod: 10 },
+        cha: { base: 10, score: 10, mod: 10 },
+      };
     return {
       str: getAbilityStats(Ability.STR, character.value),
       dex: getAbilityStats(Ability.DEX, character.value),
@@ -321,6 +345,12 @@ export const useCharacterStore = defineStore("character", () => {
     };
   });
   const saves = computed((): SavesStats => {
+    if (!character.value)
+      return {
+        fort: { base: 0, score: 0, conditional: [] },
+        reflex: { base: 0, score: 0, conditional: [] },
+        will: { base: 0, score: 0, conditional: [] },
+      };
     return {
       fort: getSaveStats(Save.FORT, abilityScores.value.con.mod, character.value),
       reflex: getSaveStats(Save.REFLEX, abilityScores.value.dex.mod, character.value),
@@ -328,6 +358,7 @@ export const useCharacterStore = defineStore("character", () => {
     };
   });
   const baseAttack = computed((): number => {
+    if (!character.value) return 0;
     return character.value.levels.reduce((curr, lvl) => Number(lvl.baseAttack) + curr, 0);
   });
   const ac = computed(
@@ -345,6 +376,22 @@ export const useCharacterStore = defineStore("character", () => {
         conditional: ConditionalModifiers<number>;
       };
     } => {
+      if (!character.value) {
+        return {
+          ac: {
+            value: 10,
+            conditional: [],
+          },
+          touch: {
+            value: 10,
+            conditional: [],
+          },
+          flatfooted: {
+            value: 10,
+            conditional: [],
+          },
+        };
+      }
       const armorEffects = relevantEffects(character.value, (e) => e.kind === EffectKind.ARMOR);
       const shieldEffects = relevantEffects(character.value, (e) => e.kind === EffectKind.SHIELD);
       const otherEffects = relevantEffects(
@@ -378,13 +425,15 @@ export const useCharacterStore = defineStore("character", () => {
     },
   );
   const attacks = computed((): Attack[] => {
+    if (!character.value) return [];
+
     return character.value.items
       .filter((item): item is Weapon => item.kind === EffectKind.WEAPON)
       .filter((item) => item.active)
       .map((wpn: Weapon) => {
         const effects = [
           ...wpn.details,
-          ...relevantEffects(character.value, (e) => e.kind !== EffectKind.WEAPON, wpn.tags),
+          ...relevantEffects(character.value!, (e) => e.kind !== EffectKind.WEAPON, wpn.tags),
         ];
         const adjustedBaseAttack = baseAttack.value + getTotalEffectModifier("baseAttack", effects);
         const fullAttackBase = attacksFromBaseAttack(adjustedBaseAttack);
@@ -430,9 +479,9 @@ export const useCharacterStore = defineStore("character", () => {
       });
   });
   watch(
-    character,
+    applicationData,
     () => {
-      saveToLocalStorage(character.value);
+      saveToLocalStorage(applicationData.value);
     },
     { deep: true },
   );
@@ -452,5 +501,6 @@ export const useCharacterStore = defineStore("character", () => {
     attacks,
     importCharacter,
     characterAsExport,
+    newCharacter,
   };
 });
