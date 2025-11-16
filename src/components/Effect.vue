@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref, stop } from "vue";
-import { EffectKind, type Effect } from "../types.ts";
-import EffectDetails from "./EffectDetails.vue";
-import Card from "./Card.vue";
+import { ref } from "vue";
+
+import { type Effect, EffectKind } from "../types.ts";
+import EffectDisplay from "./EffectDisplay.vue";
+import EffectEdit from "./EffectEdit.vue";
 
 const editing = defineModel<boolean>("editing", { default: false });
 const {
@@ -20,9 +21,8 @@ const emit = defineEmits<{
   (e: "update:effect", effect: Effect): void;
   (e: "delete"): void;
 }>();
+
 const open = ref(false);
-const deleting = ref(false);
-const newTagValue = ref("");
 
 if (!effect.name) {
   editing.value = true;
@@ -34,133 +34,28 @@ if (allowedKinds.length === 1) {
     kind: allowedKinds[0]!,
   });
 }
-function toggleEditing() {
-  if (!editable) return;
-  editing.value = !editing.value;
-  if (editing) {
-    open.value = true;
-  }
-}
-function confirmDelete() {
-  if (deleting.value) {
-    emit("delete");
-    deleting.value = false;
-    editing.value = false;
-    return;
-  }
-  deleting.value = true;
-}
-function stopDeleting() {
-  // When using a touch screen and tapping on the toggle-edit-button, it should be disabled and
-  // nothing should happen. However, the blur event is triggered before the click event, so the
-  // button activates before begin clicked. Here we delay the result of the blur event ever so
-  // slightly to make the click event happen before the blur event
-  setTimeout(() => {
-    deleting.value = false;
-  }, 50);
-}
-function newEffect() {
-  effect.details.push({
-    target: "str",
-    modifier: 0,
-  });
-}
-function deleteEffect(idx: number) {
-  effect.details.splice(idx, 1);
-}
-function addNewTag() {
-  effect.tags ??= [];
-  effect.tags.push(newTagValue.value);
-  newTagValue.value = "";
-}
 </script>
 <template>
-  <Card v-model:open="open" :collapse="!editing">
-    <template #pre-header v-if="toggle">
-      <input type="checkbox" class="checkbox checkbox-sm mr-1" v-model="effect.active" />
-    </template>
-    <template #header>
-      <div v-if="editing" class="flex flex-row gap-1 items-center">
-        <input class="input input-sm w-full" v-model="effect.name" />
-        <div class="ml-auto"></div>
-        <button
-          v-if="editing"
-          class="btn btn-sm"
-          :class="deleting && 'btn-error'"
-          @click="confirmDelete()"
-          @blur="stopDeleting()"
-        >
-          <i class="fas fa-trash text-center w-8" />
-        </button>
-        <button class="btn btn-sm" :disabled="deleting" @click="toggleEditing()">
-          <i class="fas fa-check text-center w-8" />
-        </button>
-      </div>
-      <div v-else class="flex flex-row gap-1 items-center">
-        <h3 class="font-bold overflow-hidden text-ellipsis flex-shrink-1">
-          {{ effect.name }}
-        </h3>
-        <div class="text-gray-400">({{ effect.kind }})</div>
-        <button
-          v-if="editable"
-          class="btn btn-xs btn-square btn-ghost ml-auto"
-          @click="toggleEditing()"
-        >
-          <i class="fas fa-pencil text-center w-8" />
-        </button>
-      </div>
-    </template>
-    <div class="flex flex-col gap-1 max-w-100">
-      <div v-if="editing" class="grid grid-cols-2 justify-stretch gap-1">
-        <label
-          v-if="editing && allowedKinds.length > 1"
-          class="select select-sm"
-        >
-          <span class="label">Type</span>
-          <select class="min-w-max" v-model="effect.kind">
-            <option v-for="kind in allowedKinds" :value="kind">{{ kind }}</option>
-          </select>
-        </label>
-        <slot></slot>
-      </div>
-      <template v-for="(_, i) in effect.details">
-        <EffectDetails
-          v-model:effect="effect.details[i]!"
-          :editing="editing"
-          @delete="deleteEffect(i)"
-        />
-      </template>
-      <div
-        v-if="editing"
-        class="btn btn-xs btn-ghost w-full text-gray-400 border-dashed border-gray-400"
-        @click="newEffect()"
-      >
-        Add a new effect...
-      </div>
-      <div class="flex flex-row gap-1 items-center flex-wrap">
-        <div v-for="(tag, i) in effect.tags" class="bg-gray-200 border rounded-sm px-1 text-xs">
-          {{ tag }}
-          <i
-            v-if="editing"
-            class="fas fa-xmark bg-gray-200 text-xs"
-            @click="effect.tags!.splice(i, 1)"
-          />
-        </div>
-        <div
-          v-if="editing"
-          class="input input-xs h-4 border rounded-sm border-gray-400 text-gray-400 border-dashed px-1 text-xs w-fit"
-        >
-          <input
-            class="w-16"
-            type="text"
-            placeholder="Add a tag..."
-            v-model="newTagValue"
-            @keydown.enter="addNewTag()"
-          />
-          <i v-if="newTagValue" class="fas fa-plus text-xs cursor-pointer" @click="addNewTag()" />
-        </div>
-      </div>
-    </div>
-  </Card>
+  <EffectEdit
+    v-if="editing"
+    :effect="effect"
+    @update:effect="(e) => emit('update:effect', e)"
+    :allowed-kinds="allowedKinds"
+    @delete="emit('delete')"
+    @done="editing = false"
+  >
+    <slot name="editing"></slot>
+  </EffectEdit>
+  <EffectDisplay
+    v-else
+    v-model:open="open"
+    :effect="effect"
+    :editable="editable"
+    :toggle="toggle"
+    :allowed-kinds="allowedKinds"
+    @edit="editing = true"
+  >
+    <slot name="display"></slot>
+  </EffectDisplay>
 </template>
 <style scoped></style>

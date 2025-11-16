@@ -1,22 +1,22 @@
 <script setup lang="ts">
+import { computed } from "vue";
+
+import { useConfirmation } from "@/composables/useConfirmation";
+import { effectTypes } from "@/constants";
 import {
-  type AbilityT,
   type EffectDetails,
   type EffectTarget,
   type NumericEffectDetails,
-  type NumericEffectTargetT,
-  type SaveT,
   type TextEffectDetails,
-  type TextEffectTargetT,
 } from "@/types";
-import NumberInput from "./NumberInput.vue";
-import ConfirmButton from "./ConfirmButton.vue";
 import { hasOwnProperty, signedInt } from "@/utils";
-import { computed } from "vue";
-import { effectTypes } from "@/constants";
-import { useConfirmation } from "@/composables/useConfirmation";
+
+import ConfirmButton from "./ConfirmButton.vue";
+import NumberInput from "./NumberInput.vue";
+import { allTargets, numericTargets, textTargets } from "./effectTargets.ts";
+
 const effect = defineModel<EffectDetails>("effect", { required: true });
-const { editing = false } = defineProps<{ editing: boolean }>();
+const { editing = false } = defineProps<{ editing?: boolean }>();
 const emit = defineEmits<{
   (e: "delete"): void;
   (e: "update:effect", v: EffectDetails): void;
@@ -24,33 +24,6 @@ const emit = defineEmits<{
 const { confirming, events } = useConfirmation(() => {
   toggleConditional();
 });
-const numericTargets: Record<NumericEffectTargetT | AbilityT | SaveT, string> = {
-  str: "Strength",
-  dex: "Dexterity",
-  con: "Constitution",
-  int: "Intelligence",
-  wis: "Wisdom",
-  cha: "Charisma",
-  fort: "Fortitude",
-  reflex: "Reflex",
-  will: "Will",
-  saves: "All saves",
-  attack: "Attack",
-  damage: "Damage",
-  ac: "AC",
-  armorAc: "Armor",
-  shieldAc: "Shield",
-  touchAc: "Touch AC",
-  skills: "Tkills",
-  initiative: "Initiative",
-  hp: "HP",
-  extraAttack: "Extra attack (@)",
-  baseAttack: "Base attack",
-};
-const textTargets: Record<TextEffectTargetT, string> = {
-  damageDie: "damage die",
-};
-const allTargets = { ...numericTargets, ...textTargets };
 
 const hasConditional = computed(() => effect.value.conditional != undefined);
 const conditionalButtonEvents = computed(() => {

@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, watchEffect } from "vue";
+import { computed, ref, watchEffect } from "vue";
+
 import { EffectKind, type Item } from "../types.ts";
 import Effect from "./Effect.vue";
 import NumberInput from "./NumberInput.vue";
@@ -26,7 +27,13 @@ watchEffect(() => {
     editable
     toggle
   >
-    <template v-if="item.kind === EffectKind.WEAPON">
+    <template v-if="item.kind === EffectKind.WEAPON" #display>
+      <div>
+        {{ item.dice }} <span v-if="item.strMod">(str x{{ item.strMod }})</span>
+        <span v-if="item.ranged" class="italic"> (ranged)</span>
+      </div>
+    </template>
+    <template v-if="item.kind === EffectKind.WEAPON" #editing>
       <label class="label text-xs">
         <input type="checkbox" class="checkbox checkbox-xs" v-model="item.ranged" />
         Ranged

@@ -1,0 +1,135 @@
+<script setup lang="ts">
+import { ref } from "vue";
+
+import { useConfirmation } from "@/composables/useConfirmation.ts";
+
+import { type Armor, type Effect, EffectKind, type Weapon } from "../types.ts";
+import Card from "./Card.vue";
+import EffectDetails from "./EffectDetails.vue";
+
+const { effect, allowedKinds = Object.values(EffectKind) } = defineProps<{
+  effect: Effect;
+  allowedKinds?: EffectKind[];
+}>();
+const emit = defineEmits<{
+  (e: "update:effect", effect: Effect): void;
+  (e: "delete"): void;
+  (e: "done"): void;
+}>();
+const newTagValue = ref("");
+
+if (allowedKinds.length === 1) {
+  updateKind(allowedKinds[0]!);
+}
+function doneEditing() {
+  emit("done");
+}
+const { confirming: deleting, events: deletingEvents } = useConfirmation(() => {
+  emit("delete");
+});
+
+function newEffect() {
+  effect.details.push({
+    target: "str",
+    modifier: 0,
+  });
+}
+function deleteEffect(idx: number) {
+  effect.details.splice(idx, 1);
+}
+function addNewTag() {
+  effect.tags ??= [];
+  effect.tags.push(newTagValue.value);
+  newTagValue.value = "";
+}
+function updateKind(newKind: EffectKind) {
+  console.log("here", newKind);
+  const result: Effect = {
+    name: effect.name,
+    description: effect.description,
+    kind: newKind,
+    tags: effect.tags,
+    details: effect.details,
+    active: effect.active,
+    passive: effect.passive,
+  };
+  if (result.kind == EffectKind.WEAPON) {
+    emit("update:effect", {
+      ...result,
+      dice: (effect as Weapon).dice ?? "",
+      ranged: (effect as Weapon).ranged,
+      strMod: (effect as Weapon).strMod ?? 1,
+    } as Weapon);
+    return;
+  }
+  if (result.kind == EffectKind.ARMOR) {
+    emit("update:effect", {
+      ...result,
+      weightClass: (effect as Armor).weightClass,
+    } as Armor);
+    return;
+  }
+  emit("update:effect", result);
+}
+</script>
+<template>
+  <Card open>
+    <template #header>
+      <div class="flex flex-row gap-1 items-center">
+        <input class="input input-sm w-full" v-model="effect.name" />
+        <div class="ml-auto"></div>
+        <button class="btn btn-sm" :class="deleting && 'btn-error'" v-on="deletingEvents">
+          <i class="fas fa-trash text-center w-8" />
+        </button>
+        <button class="btn btn-sm" :disabled="deleting" @click="doneEditing()">
+          <i class="fas fa-check text-center w-8" />
+        </button>
+      </div>
+    </template>
+    <div class="flex flex-col gap-1 max-w-100">
+      <div class="grid grid-cols-2 justify-stretch gap-1">
+        <label v-if="allowedKinds.length > 1" class="select select-sm">
+          <span class="label">Type</span>
+          <select
+            class="min-w-max"
+            :value="effect.kind"
+            @input="
+              (e) => e.target && updateKind((e.target as HTMLInputElement).value as EffectKind)
+            "
+          >
+            <option v-for="kind in allowedKinds" :value="kind">{{ kind }}</option>
+          </select>
+        </label>
+        <slot></slot>
+      </div>
+      <template v-for="(_, i) in effect.details">
+        <EffectDetails v-model:effect="effect.details[i]!" editing @delete="deleteEffect(i)" />
+      </template>
+      <div
+        class="btn btn-xs btn-ghost w-full text-gray-400 border-dashed border-gray-400"
+        @click="newEffect()"
+      >
+        Add a new effect...
+      </div>
+      <div class="flex flex-row gap-1 items-center flex-wrap">
+        <div v-for="(tag, i) in effect.tags" class="bg-gray-200 border rounded-sm px-1 text-xs">
+          {{ tag }}
+          <i class="fas fa-xmark bg-gray-200 text-xs" @click="effect.tags!.splice(i, 1)" />
+        </div>
+        <div
+          class="input input-xs h-4 border rounded-sm border-gray-400 text-gray-400 border-dashed px-1 text-xs w-fit"
+        >
+          <input
+            class="w-16"
+            type="text"
+            placeholder="Add a tag..."
+            v-model="newTagValue"
+            @keydown.enter="addNewTag()"
+          />
+          <i v-if="newTagValue" class="fas fa-plus text-xs cursor-pointer" @click="addNewTag()" />
+        </div>
+      </div>
+    </div>
+  </Card>
+</template>
+<style scoped></style>

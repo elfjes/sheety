@@ -1,18 +1,19 @@
 <script setup lang="ts">
-import HitPoints from "@/components/HitPoints.vue";
-import Attack from "@/components/Attack.vue";
-import { useCharacterStore } from "@/stores/character";
 import { storeToRefs } from "pinia";
-import { EffectKind, Save, type Conditional, type ConditionalModifiers, type SaveT } from "@/types";
-import Effect from "@/components/Effect.vue";
-import Card from "@/components/Card.vue";
-import { signedInt } from "@/utils";
 import { computed } from "vue";
+
+import Attack from "@/components/Attack.vue";
+import Card from "@/components/Card.vue";
+import Effect from "@/components/Effect.vue";
+import HitPoints from "@/components/HitPoints.vue";
+import { useCharacterStore } from "@/stores/character";
+import { type Conditional, type ConditionalModifiers, EffectKind, Save, type SaveT } from "@/types";
+import { signedInt } from "@/utils";
 
 const store = useCharacterStore();
 const { character, attacks, ac, saves } = storeToRefs(store);
 function newEffect() {
-  character.value.temporaryEffects.push({
+  character.value?.temporaryEffects.push({
     name: "",
     kind: EffectKind.SPELL,
     details: [],
@@ -20,7 +21,7 @@ function newEffect() {
   });
 }
 function deleteEffect(itemIdx: number) {
-  character.value.temporaryEffects.splice(itemIdx, 1);
+  character.value?.temporaryEffects.splice(itemIdx, 1);
 }
 function processConditionals(input: Record<string, { conditional: ConditionalModifiers<number> }>) {
   const maxLen = Math.max(...Object.values(input).map((v) => v.conditional.length));
@@ -94,11 +95,11 @@ const conditionalSaves = computed(() => {
 
     <h3 class="mt-2 font-bold">Abilities & Effects</h3>
     <div class="flex flex-col gap-1">
-      <template v-for="effect in character.abilities">
+      <template v-for="effect in character?.abilities ?? []">
         <Effect v-if="!effect.passive" :effect="effect" toggle />
       </template>
       <Effect
-        v-for="(effect, idx) in character.temporaryEffects"
+        v-for="(effect, idx) in character?.temporaryEffects ?? []"
         :effect="effect"
         @delete="deleteEffect(idx)"
         toggle

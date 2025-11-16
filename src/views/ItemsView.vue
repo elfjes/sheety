@@ -1,10 +1,13 @@
 <script setup lang="ts">
+import { storeToRefs } from "pinia";
+
+import VItem from "@/components/Item.vue";
 import { useCharacterStore } from "@/stores/character";
-import Item from "@/components/Item.vue";
-import { EffectKind } from "@/types";
-const { character } = useCharacterStore();
+import { EffectKind, type Item } from "@/types";
+
+const { character } = storeToRefs(useCharacterStore());
 function newItem() {
-  character.items.push({
+  character.value?.items.push({
     name: "",
     kind: EffectKind.OTHER_ITEM,
     details: [],
@@ -12,12 +15,21 @@ function newItem() {
   });
 }
 function deleteItem(itemIdx: number) {
-  character.items.splice(itemIdx, 1);
+  character.value?.items.splice(itemIdx, 1);
+}
+function updateItem(item: Item, idx: number) {
+  if (!character.value) return;
+  character.value.items[idx] = item;
 }
 </script>
 <template>
   <div class="flex flex-col gap-1">
-    <Item v-for="(item, idx) in character.items" :item="item" @delete="deleteItem(idx)" />
+    <VItem
+      v-for="(item, idx) in character?.items ?? []"
+      :item="item"
+      @update:item="(i) => updateItem(i, idx)"
+      @delete="deleteItem(idx)"
+    />
     <div
       class="btn btn-ghost rounded-box bg-base-200/60 w-full text-gray-400 border-dashed border-gray-400"
       @click="newItem()"
