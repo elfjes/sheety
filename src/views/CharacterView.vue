@@ -1,24 +1,18 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
 import { storeToRefs } from "pinia";
-import { useCharacterStore } from "@/stores/character";
-import { Ability, Save, type CharacterLevel } from "@/types";
+import { computed, ref } from "vue";
 
+import Card from "@/components/Card.vue";
+import NumberInput from "@/components/NumberInput.vue";
+import { useCharacterStore } from "@/stores/character";
+import { Ability, type CharacterLevel, Save } from "@/types";
 import { signedInt } from "@/utils";
 
-import NumberInput from "@/components/NumberInput.vue";
-import Card from "@/components/Card.vue";
-
 const store = useCharacterStore();
-const { abilityScores, saves, hitpoints, classLevels, character } = storeToRefs(store);
+const { abilityScores, saves, classLevels, character } = storeToRefs(store);
 
-const levelsOpen = ref(false);
+const levelsOpen = ref((character.value?.levels.length ?? 0) == 0);
 const deleting = ref(false);
-const lvlString = computed(() =>
-  Object.entries(classLevels.value)
-    .map(([cls, lvl]) => `${cls} ${lvl}`)
-    .join("/"),
-);
 function confirmDelete(idx: number) {
   if (!deleting.value) {
     deleting.value = true;
@@ -44,7 +38,7 @@ function newLevel() {
   <div v-if="character" class="flex flex-col gap-1">
     <Card collapse v-model:open="levelsOpen">
       <template #header>
-        <h2 class="text-lg font-bold">Classes ({{ lvlString }})</h2>
+        <h2 class="text-lg font-bold">Classes ({{ character.levelString() }})</h2>
       </template>
       <div
         class="grid grid-cols-[minmax(40px,25%)_max-content_repeat(3,_auto)_max-content] gap-1 items-center"

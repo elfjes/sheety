@@ -1,6 +1,9 @@
 <script setup lang="ts">
-import type { Action } from "@/types";
 import { nextTick, ref, useTemplateRef } from "vue";
+
+import type { Action } from "@/types";
+
+import ActionMenuItem from "./ActionMenuItem.vue";
 
 const { actions } = defineProps<{
   actions: Action[];
@@ -47,12 +50,11 @@ function performAction(action: Action) {
       <ul
         class="relative border rounded-field border-base-300 right-0 w-full bg-base-100 z-10 shadow-md py-1"
       >
-        <li
+        <ActionMenuItem
           v-for="action in actions"
-          class="text-lg font-medium w-full cursor-pointer hover:bg-base-200 px-2 py-1"
-        >
-          <a @click="performAction(action)">{{ action.title }}</a>
-        </li>
+          :action="action"
+          @action="performAction(action)"
+        />
       </ul>
     </div>
   </div>

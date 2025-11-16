@@ -148,6 +148,8 @@ export interface Attack {
 export interface Action {
   title: string;
   event: string;
+  color?: string;
+  confirm?: boolean
 }
 export interface SingleSaveStats {
   base: number;

@@ -31,6 +31,8 @@ const actions: Action[] = [
   {
     title: "Delete",
     event: "delete",
+    color: "error",
+    confirm: true,
   },
 ];
 </script>
@@ -44,10 +46,10 @@ const actions: Action[] = [
       >
         <li
           v-for="(character, idx) in store.characters"
-          class="character-item text-lg font-medium w-full cursor-pointer hover:bg-base-200 focus:bg-base-200 px-2 py-1"
+          class="character-item flex flex-row items-center text-lg font-medium w-full cursor-pointer hover:bg-base-200 focus:bg-base-200 px-2 py-1"
           :class="{ active: store.activeCharacterIndex === idx }"
         >
-          <a @click="activateCharacter(idx)"
+          <a class="flex-grow" @click="activateCharacter(idx)"
             >{{ character.name }} ({{ character.levelString() }})</a
           >
           <ActionMenu
