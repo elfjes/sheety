@@ -247,17 +247,19 @@ function relevantEffects(
     [EffectKind.SHIELD]: 1,
     [EffectKind.ARMOR]: 1,
   };
-  const items = character.items.filter((item) => {
-    if (!hasOwnProperty(maxItemCount, item.kind)) {
-      return true;
-    }
+  const items = character.items
+    .filter((effect) => effect.active !== false)
+    .filter((item) => {
+      if (!hasOwnProperty(maxItemCount, item.kind)) {
+        return true;
+      }
 
-    if (maxItemCount[item.kind] > 0) {
-      maxItemCount[item.kind] -= 1;
-      return true;
-    }
-    return false;
-  });
+      if (maxItemCount[item.kind] > 0) {
+        maxItemCount[item.kind] -= 1;
+        return true;
+      }
+      return false;
+    });
   return [...character.abilities, ...items, ...character.temporaryEffects]
     .filter((effect) => effect.active !== false)
     .filter(filter ?? (() => true))

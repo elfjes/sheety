@@ -1,7 +1,10 @@
-import { setActivePinia, createPinia } from "pinia";
+import { createPinia, setActivePinia } from "pinia";
+import { beforeEach, describe, expect, test } from "vitest";
+
+import { Character } from "@/character";
+import { type CharacterSheetV2, EffectKind } from "@/types";
+
 import { useCharacterStore } from "./character";
-import { describe, test, beforeEach, expect } from "vitest";
-import { EffectKind, type CharacterSheetV2 } from "@/types";
 
 function defaultCharacter(): CharacterSheetV2 {
   return {
@@ -35,10 +38,11 @@ function defaultCharacter(): CharacterSheetV2 {
     temporaryEffects: [],
   };
 }
-function defaultStore() {
+function defaultStore(): ReturnType<typeof useCharacterStore> & { character: Character } {
   const store = useCharacterStore();
-  store.character = defaultCharacter();
-  return store;
+  store.characters = [new Character()];
+  store.activateCharacter(0);
+  return store as ReturnType<typeof useCharacterStore> & { character: Character };
 }
 describe("Character Store AC", () => {
   beforeEach(() => {
@@ -46,7 +50,7 @@ describe("Character Store AC", () => {
   });
   test("Calculates correct AC, touch and Flatfooted ac", () => {
     const store = defaultStore();
-    store.character.abilityScores.dex = 12;
+    store.character.baseAbilityScores.dex = 12;
     store.character.items.push({
       name: "Leather Armor",
       kind: EffectKind.ARMOR,
@@ -64,11 +68,24 @@ describe("Character Store AC", () => {
     expect(store.ac.touch.value).toBe(11);
     expect(store.ac.flatfooted.value).toBe(12);
   });
-  test("calculates AC using first armor", () => {
+  test("calculates AC using first active armor", () => {
     const store = defaultStore();
     store.character.items.push(
       {
         name: "Leather Armor",
+        kind: EffectKind.ARMOR,
+        active: false,
+        weightClass: "medium",
+        details: [
+          {
+            target: "armorAc",
+            effectType: "armor",
+            modifier: 2,
+          },
+        ],
+      },
+      {
+        name: "Studded Leather Armor",
         kind: EffectKind.ARMOR,
         active: true,
         weightClass: "medium",
@@ -76,7 +93,7 @@ describe("Character Store AC", () => {
           {
             target: "armorAc",
             effectType: "armor",
-            modifier: 2,
+            modifier: 3,
           },
         ],
       },
@@ -94,7 +111,7 @@ describe("Character Store AC", () => {
         ],
       },
     );
-    expect(store.ac.ac.value).toBe(12);
+    expect(store.ac.ac.value).toBe(13);
   });
   test("Shield and armor can have enhancement bonus", () => {
     const store = defaultStore();
