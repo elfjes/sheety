@@ -65,7 +65,7 @@ function updateKind(newKind: EffectKind) {
   if (result.kind == EffectKind.ARMOR) {
     emit("update:effect", {
       ...result,
-      weightClass: (effect as Armor).weightClass,
+      weightClass: (effect as Armor).weightClass ?? "light",
     } as Armor);
     return;
   }
