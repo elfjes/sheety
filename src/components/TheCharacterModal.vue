@@ -29,6 +29,10 @@ const actions: Action[] = [
     event: "export",
   },
   {
+    title: "Duplicate",
+    event: "duplicate",
+  },
+  {
     title: "Delete",
     event: "delete",
     color: "error",
@@ -56,6 +60,7 @@ const actions: Action[] = [
             :actions="actions"
             @export="emit('export', idx)"
             @delete="store.deleteCharacter(idx)"
+            @duplicate="store.duplicateCharacter(idx)"
           ></ActionMenu>
         </li>
       </ul>

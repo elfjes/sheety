@@ -395,3 +395,15 @@ describe("CharacterStore saves", () => {
     expect(store.saves.will.conditional).toEqual([]);
   });
 });
+describe("Store character management", () => {
+  beforeEach(() => {
+    setActivePinia(createPinia());
+  });
+  test("Duplicates a character", () => {
+    const store = defaultStore();
+    expect(store.characters.length).toBe(1);
+    store.duplicateCharacter(0);
+    expect(store.characters.length).toBe(2);
+    expect(store.characters[1]!.name).toMatch(/\(copy\)$/);
+  });
+});

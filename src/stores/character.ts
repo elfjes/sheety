@@ -1,5 +1,5 @@
 import { defineStore } from "pinia";
-import { computed, ref, unref, watch } from "vue";
+import { computed, ref, toRaw, unref, watch } from "vue";
 
 import { Character, defaultCharacterSheet } from "@/character";
 import { migrateApplicationData, migrateCharacter } from "@/migrate";
@@ -72,7 +72,13 @@ export const useCharacterStore = defineStore("character", () => {
 
     activeCharacterIndex.value = idx;
   }
-
+  function duplicateCharacter(idx: number) {
+    const original: Character | undefined = characters.value[idx];
+    if (!original) throw Error(`Invalid character index ${idx}`);
+    const clone = JSON.parse(JSON.stringify(original.dump()))
+    clone.name += " (copy)";
+    newCharacter(clone);
+  }
   function deleteCharacter(idx: number) {
     characters.value.splice(idx, 1);
     if (!activeCharacterIndex.value) return;
@@ -171,5 +177,6 @@ export const useCharacterStore = defineStore("character", () => {
     characterAsExport,
     newCharacter,
     deleteCharacter,
+    duplicateCharacter,
   };
 });
