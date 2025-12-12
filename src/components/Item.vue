@@ -2,7 +2,7 @@
 import { computed, ref, watchEffect } from "vue";
 
 import { EffectKind, type Item } from "../types.ts";
-import Effect from "./Effect.vue";
+import EffectCard from "./EffectCard.vue";
 import NumberInput from "./NumberInput.vue";
 
 const { item } = defineProps<{ item: Item }>();
@@ -14,7 +14,7 @@ if (!item.name) {
 const armorWeight = ["light", "medium", "heavy"];
 </script>
 <template>
-  <Effect
+  <EffectCard
     v-model:editing="editing"
     :effect="item"
     @delete="emit('delete')"
@@ -60,6 +60,6 @@ const armorWeight = ["light", "medium", "heavy"];
         </label>
       </template>
     </template>
-  </Effect>
+  </EffectCard>
 </template>
 <style scoped></style>

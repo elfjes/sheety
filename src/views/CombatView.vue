@@ -4,10 +4,10 @@ import { computed } from "vue";
 
 import Attack from "@/components/Attack.vue";
 import Card from "@/components/Card.vue";
-import Effect from "@/components/Effect.vue";
+import EffectCard from "@/components/EffectCard.vue";
 import HitPoints from "@/components/HitPoints.vue";
 import { useCharacterStore } from "@/stores/character";
-import { type Conditional, type ConditionalModifiers, EffectKind, Save, type SaveT } from "@/types";
+import { type Conditional, type ConditionalModifiers, type Effect, EffectKind } from "@/types";
 import { signedInt } from "@/utils";
 
 const store = useCharacterStore();
@@ -19,6 +19,10 @@ function newEffect() {
     details: [],
     active: false,
   });
+}
+function updateEffect(idx: number, newEffect: Effect) {
+  if (!character.value) return;
+  character.value.temporaryEffects[idx] = newEffect;
 }
 function deleteEffect(itemIdx: number) {
   character.value?.temporaryEffects.splice(itemIdx, 1);
@@ -96,11 +100,12 @@ const conditionalSaves = computed(() => {
     <h3 class="mt-2 font-bold">Abilities & Effects</h3>
     <div class="flex flex-col gap-1">
       <template v-for="effect in character?.abilities ?? []">
-        <Effect v-if="!effect.passive" :effect="effect" toggle />
+        <EffectCard v-if="!effect.passive" :effect="effect" toggle />
       </template>
-      <Effect
+      <EffectCard
         v-for="(effect, idx) in character?.temporaryEffects ?? []"
         :effect="effect"
+        @update:effect="(e) => updateEffect(idx, e)"
         @delete="deleteEffect(idx)"
         toggle
         editable

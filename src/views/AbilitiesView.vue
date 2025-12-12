@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { storeToRefs } from "pinia";
 
-import Effect from "@/components/Effect.vue";
+import EffectCard from "@/components/EffectCard.vue";
 import { useCharacterStore } from "@/stores/character";
 import { EffectKind } from "@/types";
 
@@ -21,7 +21,7 @@ function deleteAbility(itemIdx: number) {
 </script>
 <template>
   <div class="flex flex-col gap-1">
-    <Effect
+    <EffectCard
       v-for="(ability, idx) in character?.abilities ?? []"
       :effect="ability"
       @delete="deleteAbility(idx)"
@@ -37,7 +37,7 @@ function deleteAbility(itemIdx: number) {
           Passive
         </label>
       </template>
-    </Effect>
+    </EffectCard>
     <div
       class="btn btn-ghost rounded-box bg-base-200/60 w-full text-gray-400 border-dashed border-gray-400"
       @click="newAbility()"

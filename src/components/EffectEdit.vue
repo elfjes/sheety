@@ -43,7 +43,6 @@ function addNewTag() {
   newTagValue.value = "";
 }
 function updateKind(newKind: EffectKind) {
-  console.log("here", newKind);
   const result: Effect = {
     name: effect.name,
     description: effect.description,

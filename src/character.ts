@@ -183,7 +183,6 @@ export class Character {
           conditionalDamage: getEffectsForTarget(["damage", "damageDie"], effects)
             .filter((e) => e.conditional)
             .map((e) => {
-              console.log(e);
               return {
                 condition: e.conditional!,
                 modifier: hasOwnProperty(e, "modifier")
