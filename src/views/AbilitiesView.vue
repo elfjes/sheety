@@ -3,7 +3,7 @@ import { storeToRefs } from "pinia";
 
 import EffectCard from "@/components/EffectCard.vue";
 import { useCharacterStore } from "@/stores/character";
-import { EffectKind } from "@/types";
+import { type Effect, EffectKind } from "@/types";
 
 const { character } = storeToRefs(useCharacterStore());
 function newAbility() {
@@ -18,6 +18,11 @@ function newAbility() {
 function deleteAbility(itemIdx: number) {
   character.value?.abilities.splice(itemIdx, 1);
 }
+
+function updateAbiilty(idx: number, newEffect: Effect) {
+  if (!character.value) return;
+  character.value.abilities[idx] = newEffect;
+}
 </script>
 <template>
   <div class="flex flex-col gap-1">
@@ -25,6 +30,7 @@ function deleteAbility(itemIdx: number) {
       v-for="(ability, idx) in character?.abilities ?? []"
       :effect="ability"
       @delete="deleteAbility(idx)"
+      @update:effect="(e) => updateAbiilty(idx, e)"
       :allowed-kinds="[EffectKind.FEAT, EffectKind.CLASS, EffectKind.RACIAL]"
       editable
     >
