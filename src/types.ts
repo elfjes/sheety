@@ -66,6 +66,7 @@ export interface Effect {
   details: EffectDetails[];
   active?: boolean;
   passive?: boolean;
+  usages?: Usage;
 }
 export interface Weapon extends Effect {
   kind: EffectKind.WEAPON;
@@ -110,6 +111,10 @@ export type NumericEffectTargetT =
   | SaveT;
 export type TextEffectTargetT = (typeof TextEffectTarget)[keyof typeof TextEffectTarget];
 export type EffectTarget = AbilityT | SaveT | NumericEffectTargetT | TextEffectTargetT;
+export interface Usage {
+  max: number,
+  current: number,
+}
 export interface BaseEffectDetails {
   target: EffectTarget;
 

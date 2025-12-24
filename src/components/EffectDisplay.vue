@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
-
 import { signedInt } from "@/utils.ts";
 import { hasOwnProperty } from "@/utils.ts";
 
@@ -11,6 +9,7 @@ import {
   type TextEffectDetails,
 } from "../types.ts";
 import Card from "./Card.vue";
+import Slider from "./Slider.vue";
 import { allTargets, numericTargets, textTargets } from "./effectTargets.ts";
 
 const {
@@ -18,12 +17,14 @@ const {
   editable = false,
   toggle = false,
   open = false,
+  usageSlider = false,
 } = defineProps<{
   effect: Effect;
   allowedKinds?: EffectKind[];
   editable?: boolean;
   toggle?: boolean;
   open?: boolean;
+  usageSlider?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -52,7 +53,17 @@ const emit = defineEmits<{
       </div>
     </template>
 
+    <template #sub-header v-if="usageSlider && effect.usages">
+      <Slider
+        v-model="effect.usages.current"
+        :max-val="effect.usages.max"
+        :compact-ticks="effect.usages.max > 10"
+      />
+    </template>
     <div class="flex flex-col gap-1 max-w-100">
+      <template v-if="effect.usages">
+        <div>Max usages: {{ effect.usages.max }}</div>
+      </template>
       <slot></slot>
       <template v-for="details in effect.details">
         <div class="flex flex-row gap-1">

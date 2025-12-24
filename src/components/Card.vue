@@ -23,6 +23,7 @@ function toggleOpen() {
         </div>
       </div>
     </div>
+    <div v-if="$slots['sub-header']" class="flex-grow"><slot name="sub-header"></slot></div>
     <div v-if="!collapse || (collapse && open)">
       <slot></slot>
     </div>

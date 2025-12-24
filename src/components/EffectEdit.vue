@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { computed, ref } from "vue";
 
 import { useConfirmation } from "@/composables/useConfirmation.ts";
 
 import { type Armor, type Effect, EffectKind, type Weapon } from "../types.ts";
 import Card from "./Card.vue";
 import EffectDetails from "./EffectDetails.vue";
+import NumberInput from "./NumberInput.vue";
 
 const { effect, allowedKinds = Object.values(EffectKind) } = defineProps<{
   effect: Effect;
@@ -20,6 +21,22 @@ const newTagValue = ref("");
 
 if (allowedKinds.length === 1) {
   updateKind(allowedKinds[0]!);
+}
+
+const usages = computed({
+  get: () => effect.usages !== undefined,
+  set: (val: boolean) => {
+    if (val) {
+      effect.usages = { max: 1, current: 0 };
+    } else {
+      effect.usages = undefined;
+    }
+  },
+});
+function updateMaxUsages(newMax: number) {
+  if (!effect.usages) return;
+  effect.usages.max = newMax;
+  effect.usages.current = Math.min(effect.usages.current, newMax);
 }
 function doneEditing() {
   emit("done");
@@ -100,6 +117,18 @@ function updateKind(newKind: EffectKind) {
           </select>
         </label>
         <slot></slot>
+      </div>
+      <div class="grid grid-cols-2 justify-stretch">
+        <label class="label text-xs">
+          <input type="checkbox" class="checkbox checkbox-xs" v-model="usages" />
+          Limit usages
+        </label>
+        <NumberInput
+          v-if="usages"
+          size="sm"
+          :model-value="effect.usages!.max"
+          @update:model-value="updateMaxUsages"
+        />
       </div>
       <template v-for="(_, i) in effect.details">
         <EffectDetails v-model:effect="effect.details[i]!" editing @delete="deleteEffect(i)" />
