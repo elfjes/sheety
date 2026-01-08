@@ -152,18 +152,18 @@ export class Character {
           ...relevantEffects(this!, (e) => e.kind !== EffectKind.WEAPON, wpn.tags),
         ];
         const adjustedBaseAttack = baseAttack + getTotalEffectModifier("baseAttack", effects);
-        const fullAttackBase = attacksFromBaseAttack(adjustedBaseAttack);
+        let fullAttackBase = attacksFromBaseAttack(adjustedBaseAttack);
 
         const attackBonus =
           (wpn.ranged ? abilityScores.dex.mod : abilityScores.str.mod) +
           getEffectModifier(getEffectsForTarget("attack", effects) as NumericEffectDetails[]);
-        for (const effect of getEffectsForTarget(
-          "extraAttack",
-          effects,
-        ) as NumericEffectDetails[]) {
-          fullAttackBase.push(adjustedBaseAttack + effect.modifier);
-        }
-        fullAttackBase.sort().reverse();
+
+        fullAttackBase = applyFullAttackModifiers(
+          fullAttackBase,
+          adjustedBaseAttack,
+          getEffectsForTarget("fullAttack", effects).map((e) => (e as TextEffectDetails).value),
+        );
+        fullAttackBase.sort((a, b) => b - a);
         return {
           name: wpn.name,
           attack: adjustedBaseAttack + attackBonus,
@@ -398,4 +398,72 @@ function attacksFromBaseAttack(bab: number) {
     bonus -= 5;
   }
   return result;
+}
+
+const fullAttackAdditionalAttacksPattern = /^\+(\/([-+]?\d+))+$/; // matches "+/+2/-3/0" etc
+const fullAttackAttackModifierPattern = /^(\/([-+]?\d+))+\/\*$/; // matches "/+2/-3/*" etc
+const fullAttackOverridePattern = /^(\/([-+]?\d+))+\/$/; // matches "/0/-5/" etc
+
+export function validateFullAttackModifier(modifier: string) {
+  return Boolean(
+    modifier.match(fullAttackAdditionalAttacksPattern) ||
+      modifier.match(fullAttackAttackModifierPattern) ||
+      modifier.match(fullAttackOverridePattern),
+  );
+}
+
+export function applyFullAttackModifiers(
+  fullAttack: number[],
+  baseAttackBonus: number,
+  modifiers: string[],
+): number[] {
+  const additionalAttacks: string[] = [];
+  const attackModifiers: string[] = [];
+  let overriddenFullAttack: string | null = null;
+  let result: number[] = [...fullAttack];
+
+  for (const mod of modifiers) {
+    if (mod.match(fullAttackAdditionalAttacksPattern)) {
+      additionalAttacks.push(mod);
+    }
+    if (mod.match(fullAttackOverridePattern)) {
+      overriddenFullAttack = mod;
+    }
+    if (mod.match(fullAttackAttackModifierPattern)) {
+      attackModifiers.push(mod);
+    }
+  }
+
+  if (overriddenFullAttack) {
+    result = parseFullAttackOverride(overriddenFullAttack).map((v) => v + baseAttackBonus!);
+  } else {
+    for (const mod of additionalAttacks) {
+      result.push(...parseFullAttackAdditionalAttacks(mod).map((v) => v + baseAttackBonus));
+    }
+  }
+  for (const mod of attackModifiers) {
+    const mods = parseFullAttackAttackModifier(mod);
+    for (let i = 0; i < result.length; i++) {
+      const thisMod = mods[Math.min(i, mods.length - 1)]!;
+      result[i]! += thisMod;
+    }
+  }
+  return result;
+}
+
+function parseFullAttackOverride(modifier: string): number[] {
+  return modifier
+    .split("/")
+    .filter((p) => p)
+    .map(Number);
+}
+
+function parseFullAttackAdditionalAttacks(modifier: string): number[] {
+  return modifier.slice(2).split("/").map(Number);
+}
+function parseFullAttackAttackModifier(modifier: string): number[] {
+  return modifier
+    .split("/")
+    .filter((p) => p && p !== "*")
+    .map(Number);
 }

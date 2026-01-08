@@ -98,12 +98,12 @@ export const NumericEffectTarget = {
   SHIELD_AC: "shieldAc",
   SKILLS: "skills",
   INITIATIVE: "initiative",
-  EXTRA_ATTACK: "extraAttack",
   BASE_ATTACK: "baseAttack",
 } as const;
 
 export const TextEffectTarget = {
   DAMAGE_DIE: "damageDie",
+  FULL_ATTACK: "fullAttack"
 } as const;
 export type NumericEffectTargetT =
   | (typeof NumericEffectTarget)[keyof typeof NumericEffectTarget]

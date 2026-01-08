@@ -20,11 +20,11 @@ export const numericTargets: Record<NumericEffectTargetT | AbilityT | SaveT, str
   skills: "Skills",
   initiative: "Initiative",
   hp: "HP",
-  extraAttack: "Extra attack (@)",
   baseAttack: "Base attack",
 };
 
 export const textTargets: Record<TextEffectTargetT, string> = {
+  fullAttack: "Full Attack",
   damageDie: "damage die",
 };
 export const allTargets = { ...numericTargets, ...textTargets };

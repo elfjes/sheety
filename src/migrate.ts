@@ -1,6 +1,33 @@
-import type { CharacterSheetV2, CharacterSheetV1, ApplicationDataV3 } from "./types";
+import type { ApplicationDataV3, CharacterSheetV1, CharacterSheetV2, Effect } from "./types";
 
 export function migrateApplicationData(data: unknown): ApplicationDataV3 | null {
+  const result = migrateApplicationDataV3(data);
+  if (!result) return result;
+  for (const character of result.characters) {
+    for (const item of character.items) {
+      migrateExtraAttackEffectInPlace(item);
+    }
+    for (const ability of character.abilities) {
+      migrateExtraAttackEffectInPlace(ability);
+    }
+    for (const ability of character.temporaryEffects) {
+      migrateExtraAttackEffectInPlace(ability);
+    }
+  }
+  return result;
+}
+function migrateExtraAttackEffectInPlace(effect: Effect) {
+  for (const [idx, details] of effect.details.entries()) {
+    // There used to be an extraAttack numerical effect
+    if ((details.target as string) == "extraAttack") {
+      effect.details[idx] = {
+        target: "fullAttack",
+        value: `+/${(details as any).modifier}`,
+      };
+    }
+  }
+}
+function migrateApplicationDataV3(data: unknown): ApplicationDataV3 | null {
   if (isApplicationDataV3(data)) return data;
   const character = migrateCharacter(data);
   return character ? migrateCharacterV2ApplicationDataV3(character) : null;
@@ -15,7 +42,7 @@ export function migrateCharacter(data: unknown): CharacterSheetV2 | null {
   return null;
 }
 
-export function migrateCharacterV1V2(character: CharacterSheetV1): CharacterSheetV2 {
+function migrateCharacterV1V2(character: CharacterSheetV1): CharacterSheetV2 {
   return {
     ...character,
     schemaVersion: "v2",
@@ -23,9 +50,7 @@ export function migrateCharacterV1V2(character: CharacterSheetV1): CharacterShee
     abilityScores: character.abilities,
   };
 }
-export function migrateCharacterV2ApplicationDataV3(
-  character: CharacterSheetV2,
-): ApplicationDataV3 {
+function migrateCharacterV2ApplicationDataV3(character: CharacterSheetV2): ApplicationDataV3 {
   return {
     schemaVersion: "v3",
     characters: [character],

@@ -2,42 +2,10 @@ import { createPinia, setActivePinia } from "pinia";
 import { beforeEach, describe, expect, test } from "vitest";
 
 import { Character } from "@/character";
-import { type CharacterSheetV2, EffectKind } from "@/types";
+import { EffectKind } from "@/types";
 
 import { useCharacterStore } from "./character";
 
-function defaultCharacter(): CharacterSheetV2 {
-  return {
-    schemaVersion: "v2",
-    name: "TestHero",
-    levels: [
-      {
-        class: "fighter",
-        hitpoints: 10,
-        baseAttack: true,
-        favored_class_hp: true,
-        favored_class_skillpoint: false,
-      },
-    ],
-    abilityScores: {
-      str: 10,
-      dex: 10,
-      con: 10,
-      int: 10,
-      wis: 10,
-      cha: 0,
-    },
-    hitpointEvents: [],
-    baseSaves: {
-      fort: 0,
-      reflex: 0,
-      will: 0,
-    },
-    abilities: [],
-    items: [],
-    temporaryEffects: [],
-  };
-}
 function defaultStore(): ReturnType<typeof useCharacterStore> & { character: Character } {
   const store = useCharacterStore();
   store.characters = [new Character()];
@@ -393,6 +361,86 @@ describe("CharacterStore saves", () => {
       ],
     });
     expect(store.saves.will.conditional).toEqual([]);
+  });
+});
+describe("Full attack effects", () => {
+  beforeEach(() => {
+    setActivePinia(createPinia());
+  });
+  test("Sorts full attack", () => {
+    const store = defaultStore();
+    store.character.items.push({
+      name: "myweapon",
+      kind: EffectKind.WEAPON,
+      active: true,
+      dice: "1d6",
+      strMod: 1,
+      details: [
+        {
+          target: "baseAttack",
+          modifier: 11,
+        },
+        {
+          target: "fullAttack",
+          value: "+/0/-5",
+        },
+      ],
+    });
+    expect(store.attacks[0]?.fullAttack).toEqual([11, 11, 6, 6, 1]);
+  });
+  test("Validates full attack modifier", () => {});
+  test("Adds a full attack bonus", () => {
+    const store = defaultStore();
+    store.character.items.push({
+      name: "myweapon",
+      kind: EffectKind.WEAPON,
+      active: true,
+      dice: "1d6",
+      strMod: 1,
+      details: [
+        {
+          target: "fullAttack",
+          value: "+/0/-5",
+        },
+        {
+          target: "fullAttack",
+          value: "/+2/+1/*",
+        },
+      ],
+    });
+    expect(store.attacks[0]?.attack).toEqual(0);
+    expect(store.attacks[0]?.fullAttack).toEqual([2, 1, -4]);
+  });
+  test("Overrides full attack", () => {
+    const store = defaultStore();
+    store.character.items.push({
+      name: "myweapon",
+      kind: EffectKind.WEAPON,
+      active: true,
+      dice: "1d6",
+      strMod: 1,
+      details: [
+        // start with a base attack +6/+1
+        { target: "baseAttack", modifier: 6 },
+        {
+          // add an additional attack at hight bab
+          target: "fullAttack",
+          value: "+/0",
+        },
+        {
+          // add a full attack bonus
+          target: "fullAttack",
+          value: "/+1/*",
+        },
+        {
+          // allow only a single attack at highest, but bonuses should apply
+          target: "fullAttack",
+          value: "/0/",
+        },
+      ],
+    });
+    expect(store.attacks[0]?.attack).toEqual(6);
+    expect(store.attacks[0]?.fullAttack).toEqual([7]);
   });
 });
 describe("Store character management", () => {
