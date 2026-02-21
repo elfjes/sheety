@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { useConfirmation } from "@/composables/useConfirmation";
+
 const model = defineModel<number>({ required: true });
 
 const { maxVal, compactTicks = false } = defineProps<{
@@ -13,6 +15,9 @@ function increment() {
   if (model.value >= maxVal) return;
   model.value++;
 }
+const { confirming: resetConfirming, events: resetEvents } = useConfirmation(() => {
+  model.value = 0;
+});
 </script>
 
 <template>
@@ -24,7 +29,7 @@ function increment() {
         min="0"
         :max="maxVal"
         v-model="model"
-        class="range range-primary range-xs mt-[-2px] w-full"
+        class="range range-primary range-xs pointer-events-none mt-[-2px] w-full"
       />
       <div class="flex justify-between px-1 text-xs">
         <template v-if="compactTicks">
@@ -39,6 +44,13 @@ function increment() {
       </div>
     </div>
     <button class="btn btn-xs btn-square rounded-md" @click="increment">+</button>
+    <button
+      class="btn btn-xs btn-square rounded-md"
+      :class="{ 'btn-warning': resetConfirming }"
+      v-on="resetEvents"
+    >
+      <i class="fas fa-rotate-left" />
+    </button>
   </div>
 </template>
 
