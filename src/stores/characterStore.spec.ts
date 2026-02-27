@@ -2,7 +2,7 @@ import { createPinia, setActivePinia } from "pinia";
 import { beforeEach, describe, expect, test } from "vitest";
 
 import { Character } from "@/character";
-import { EffectKind } from "@/types";
+import { type CasterInfo, EffectKind, type Spell } from "@/types";
 
 import { useCharacterStore } from "./character";
 
@@ -441,6 +441,58 @@ describe("Full attack effects", () => {
     });
     expect(store.attacks[0]?.attack).toEqual(6);
     expect(store.attacks[0]?.fullAttack).toEqual([7]);
+  });
+});
+describe("Caster tests", () => {
+  function defaultCaster(): CasterInfo {
+    return {
+      casterLevel: 1,
+      spontaneous: false,
+      baseSpellsPerDay: [],
+      ability: "int",
+      spells: [[]],
+    };
+  }
+  function newSpell(name: string, active: boolean): Spell {
+    return {
+      kind: EffectKind.SPELL,
+      name,
+      active,
+      details: [],
+    };
+  }
+  beforeEach(() => {
+    setActivePinia(createPinia());
+  });
+  test("activeSpells empty when no caster", () => {
+    const store = defaultStore();
+    expect(store.activeSpells).toHaveLength(0);
+  });
+  test("activeSpells empty when no spells", () => {
+    const store = defaultStore();
+    store.character.caster = defaultCaster();
+    expect(store.activeSpells).toHaveLength(0);
+  });
+  test("activeSpells have active spells but no inactive", () => {
+    const store = defaultStore();
+    store.character.caster = {
+      ...defaultCaster(),
+      spells: [[newSpell("spell1", true)], [newSpell("spell2", false)], [newSpell("spell3", true)]],
+    };
+    expect(store.activeSpells.map((s) => s.name)).toEqual(["spell1", "spell3"]);
+  });
+  test.each([
+    [10, [0, 0, 0, 0, 0]],
+    [12, [0, 1, 0, 0, 0]],
+    [14, [0, 1, 1, 0, 0]],
+    [16, [0, 1, 1, 1, 0]],
+    [18, [0, 1, 1, 1, 1]],
+    [20, [0, 2, 1, 1, 1]],
+  ])("bonus spells are calculated", (abilityScore, expected) => {
+    const store = defaultStore();
+    store.character.caster = { ...defaultCaster(), baseSpellsPerDay: [1, 1, 1, 1, 1] };
+    store.character.updateBaseAbilityScore(store.character.caster.ability, abilityScore);
+    expect(store.character.spellsPerDay().map((s) => s.bonus)).toEqual(expected);
   });
 });
 describe("Store character management", () => {

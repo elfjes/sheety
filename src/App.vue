@@ -31,6 +31,7 @@ const navItems = [
   { title: "Skills", route: "/skills" },
   { title: "Abilities", route: "/abilities" },
   { title: "Items", route: "/items" },
+  { title: "Spells", route: "/spells" },
   { title: "Combat", route: "/combat" },
 ];
 

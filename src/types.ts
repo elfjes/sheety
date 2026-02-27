@@ -32,6 +32,7 @@ export interface CharacterSheetV2 {
   abilityScores: Record<AbilityT, number>;
   abilities: Effect[];
   baseSaves: Record<SaveT, number>;
+  caster?: CasterInfo;
   items: Item[];
   temporaryEffects: Effect[];
 }
@@ -58,6 +59,8 @@ export enum EffectKind {
   RACIAL = "racial",
   OTHER = "other",
 }
+// Note: after addting (optional) keys to the Effect interface,
+// make sure to update the ``updateKind`` function in EffectEdit.vue accordingly
 export interface Effect {
   name: string;
   description?: string;
@@ -86,6 +89,18 @@ export type Item = Weapon | Armor | OtherItem;
 
 export interface Feat extends Effect {
   kind: EffectKind.FEAT;
+}
+
+export interface Spell extends Effect {
+  kind: EffectKind.SPELL;
+}
+
+export interface CasterInfo {
+  ability: AbilityT;
+  casterLevel: number;
+  spontaneous: boolean;
+  baseSpellsPerDay: number[];
+  spells: Spell[][];
 }
 
 export const NumericEffectTarget = {

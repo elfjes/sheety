@@ -12,6 +12,7 @@ import {
   type ConditionalModifiers,
   type SaveT,
   type SavesStats,
+  type Spell,
 } from "@/types";
 import { deserialize, loadFromLocalStorage, saveToLocalStorage, serialize } from "@/utils";
 
@@ -75,7 +76,7 @@ export const useCharacterStore = defineStore("character", () => {
   function duplicateCharacter(idx: number) {
     const original: Character | undefined = characters.value[idx];
     if (!original) throw Error(`Invalid character index ${idx}`);
-    const clone = JSON.parse(JSON.stringify(original.dump()))
+    const clone = JSON.parse(JSON.stringify(original.dump()));
     clone.name += " (copy)";
     newCharacter(clone);
   }
@@ -144,6 +145,14 @@ export const useCharacterStore = defineStore("character", () => {
   const attacks = computed((): Attack[] => {
     return (activeCharacter.value ?? new Character()).attacks();
   });
+  const activeSpells = computed((): Spell[] =>
+    (activeCharacter.value ?? new Character()).activeSpells(),
+  );
+  const spellsPerDay = computed(() => (activeCharacter.value ?? new Character()).spellsPerDay());
+  function updateBaseSpellsPerDay(spellLevel: number, newAmount: number) {
+    if (!activeCharacter.value) return;
+    activeCharacter.value.updateBaseSpellsPerDay(spellLevel, newAmount);
+  }
   watch(
     [characters, () => unref(activeCharacterIndex)],
     () => {
@@ -172,6 +181,9 @@ export const useCharacterStore = defineStore("character", () => {
     baseAttack,
     ac,
     attacks,
+    activeSpells,
+    spellsPerDay,
+    updateBaseSpellsPerDay,
     importCharacter,
     activateCharacter,
     characterAsExport,

@@ -86,6 +86,8 @@ function updateKind(newKind: EffectKind) {
     details: effect.details,
     active: effect.active,
     passive: effect.passive,
+    usages: effect.usages,
+    duration: effect.duration,
   };
   if (result.kind == EffectKind.WEAPON) {
     emit("update:effect", {
