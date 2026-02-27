@@ -67,6 +67,7 @@ export interface Effect {
   active?: boolean;
   passive?: boolean;
   usages?: Usage;
+  duration?: Duration;
 }
 export interface Weapon extends Effect {
   kind: EffectKind.WEAPON;
@@ -103,7 +104,7 @@ export const NumericEffectTarget = {
 
 export const TextEffectTarget = {
   DAMAGE_DIE: "damageDie",
-  FULL_ATTACK: "fullAttack"
+  FULL_ATTACK: "fullAttack",
 } as const;
 export type NumericEffectTargetT =
   | (typeof NumericEffectTarget)[keyof typeof NumericEffectTarget]
@@ -112,8 +113,20 @@ export type NumericEffectTargetT =
 export type TextEffectTargetT = (typeof TextEffectTarget)[keyof typeof TextEffectTarget];
 export type EffectTarget = AbilityT | SaveT | NumericEffectTargetT | TextEffectTargetT;
 export interface Usage {
-  max: number,
-  current: number,
+  max: number;
+  current: number;
+}
+
+export const DurationUnit = {
+  ROUNDS: "rounds",
+  MINUTES: "minutes",
+  HOURS: "hours",
+  DAYS: "days",
+} as const;
+export type DurationUnitT = (typeof DurationUnit)[keyof typeof DurationUnit];
+
+export interface Duration extends Usage {
+  unit: DurationUnitT;
 }
 export interface BaseEffectDetails {
   target: EffectTarget;
@@ -154,7 +167,7 @@ export interface Action {
   title: string;
   event: string;
   color?: string;
-  confirm?: boolean
+  confirm?: boolean;
 }
 export interface SingleSaveStats {
   base: number;

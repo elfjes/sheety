@@ -3,7 +3,7 @@ import { computed, ref } from "vue";
 
 import { useConfirmation } from "@/composables/useConfirmation.ts";
 
-import { type Armor, type Effect, EffectKind, type Weapon } from "../types.ts";
+import { type Armor, DurationUnit, type Effect, EffectKind, type Weapon } from "../types.ts";
 import Card from "./Card.vue";
 import EffectDetails from "./EffectDetails.vue";
 import NumberInput from "./NumberInput.vue";
@@ -23,6 +23,23 @@ if (allowedKinds.length === 1) {
   updateKind(allowedKinds[0]!);
 }
 
+const duration = computed({
+  get: () => effect.duration !== undefined,
+  set: (val: boolean) => {
+    if (val) {
+      effect.duration = { max: 1, current: 0, unit: "rounds" };
+    } else {
+      effect.duration = undefined;
+    }
+  },
+});
+
+function updateMaxDuration(newMax: number) {
+  if (!effect.duration) return;
+  effect.duration.max = newMax;
+  effect.duration.current = Math.min(effect.duration.current, newMax);
+}
+
 const usages = computed({
   get: () => effect.usages !== undefined,
   set: (val: boolean) => {
@@ -33,6 +50,7 @@ const usages = computed({
     }
   },
 });
+
 function updateMaxUsages(newMax: number) {
   if (!effect.usages) return;
   effect.usages.max = newMax;
@@ -118,17 +136,37 @@ function updateKind(newKind: EffectKind) {
         </label>
         <slot></slot>
       </div>
-      <div class="grid grid-cols-2 justify-stretch">
-        <label class="label text-xs">
-          <input type="checkbox" class="checkbox checkbox-xs" v-model="usages" />
-          Limit usages
-        </label>
-        <NumberInput
-          v-if="usages"
-          size="sm"
-          :model-value="effect.usages!.max"
-          @update:model-value="updateMaxUsages"
-        />
+      <div class="flex flex-col gap-1 justify-stretch">
+        <div class="grid grid-cols-3 justify-stretch">
+          <label class="label text-xs">
+            <input type="checkbox" class="checkbox checkbox-xs" v-model="usages" />
+            Limit usages
+          </label>
+          <NumberInput
+            v-if="usages"
+            size="sm"
+            :model-value="effect.usages!.max"
+            @update:model-value="updateMaxUsages"
+          />
+        </div>
+        <div class="grid grid-cols-3 justify-stretch">
+          <label class="label text-xs">
+            <input type="checkbox" class="checkbox checkbox-xs" v-model="duration" />
+            Limit duration
+          </label>
+          <template v-if="effect.duration">
+            <NumberInput
+              size="sm"
+              :model-value="effect.duration.max"
+              @update:model-value="updateMaxDuration"
+            />
+            <label class="select select-sm">
+              <select class="min-w-max" v-model="effect.duration.unit">
+                <option v-for="unit in DurationUnit" :value="unit">{{ unit }}</option>
+              </select>
+            </label>
+          </template>
+        </div>
       </div>
       <template v-for="(_, i) in effect.details">
         <EffectDetails v-model:effect="effect.details[i]!" editing @delete="deleteEffect(i)" />
