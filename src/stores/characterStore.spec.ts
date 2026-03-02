@@ -48,6 +48,7 @@ describe("Character Store ability modifiers", () => {
       base: 10,
       score: 14,
       mod: 2,
+      permanentScore: 12,
       permanentMod: 1,
     });
   });
