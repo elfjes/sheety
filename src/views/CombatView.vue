@@ -13,6 +13,7 @@ import { signedInt } from "@/utils";
 const store = useCharacterStore();
 const { character, attacks, ac, saves } = storeToRefs(store);
 const allowedTemporaryEffectKinds = [EffectKind.SPELL, EffectKind.OTHER];
+
 function newEffect() {
   character.value?.temporaryEffects.push({
     name: "",
@@ -103,6 +104,9 @@ const conditionalSaves = computed(() => {
       <template v-for="effect in character?.abilities ?? []">
         <EffectCard v-if="!effect.passive" :effect="effect" toggle usage-slider />
       </template>
+      <template v-for="effect in character?.activeSpells() ?? []">
+        <EffectCard v-if="!effect.passive" :effect="effect" duration-slider />
+      </template>
       <EffectCard
         v-for="(effect, idx) in character?.temporaryEffects ?? []"
         :effect="effect"
@@ -111,6 +115,7 @@ const conditionalSaves = computed(() => {
         toggle
         editable
         usage-slider
+        duration-slider
       />
       <div
         class="btn btn-ghost rounded-box bg-base-200/60 w-full text-gray-400 border-dashed border-gray-400"

@@ -11,6 +11,7 @@ function newItem() {
     name: "",
     kind: EffectKind.OTHER_ITEM,
     details: [],
+    passive: true,
     active: true,
   });
 }

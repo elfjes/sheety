@@ -1,6 +1,7 @@
 import type {
   AbilityT,
   Attack,
+  CasterInfo,
   CharacterLevel,
   CharacterSheetV2,
   ConditionalModifiers,
@@ -14,6 +15,7 @@ import type {
   SavesStats,
   SingleAbiiltyStats,
   SingleSaveStats,
+  Spell,
   TextEffectDetails,
   Weapon,
 } from "./types";
@@ -26,8 +28,9 @@ export class Character {
   levels: CharacterLevel[];
   hitpointEvents: number[];
   baseAbilityScores: Record<AbilityT, number>;
-  abilities: Effect[];
   baseSaves: Record<SaveT, number>;
+  abilities: Effect[];
+  caster?: CasterInfo;
   items: Item[];
   temporaryEffects: Effect[];
   constructor(data?: CharacterSheetV2) {
@@ -37,9 +40,11 @@ export class Character {
     this.levels = data.levels;
     this.hitpointEvents = data.hitpointEvents;
     this.baseAbilityScores = data.abilityScores;
-    this.abilities = data.abilities;
     this.baseSaves = data.baseSaves;
-    ((this.items = data.items), (this.temporaryEffects = data.temporaryEffects));
+    this.abilities = data.abilities;
+    this.caster = data.caster;
+    this.items = data.items;
+    this.temporaryEffects = data.temporaryEffects;
   }
   classLevels(): Record<string, number> {
     return this.levels.reduce(
@@ -58,6 +63,15 @@ export class Character {
     return Object.entries(this.classLevels())
       .map(([cls, lvl]) => `${cls} ${lvl}`)
       .join("/");
+  }
+  casterString() {
+    if (!this.caster) return "";
+    const spellsPerDayString = this.spellLevels()
+      .map((spd) =>
+        spd.baseSpellsPerDay !== null ? spd.baseSpellsPerDay + spd.bonusSpells || "-" : "*",
+      )
+      .join("/");
+    return `Caster level ${this.caster.casterLevel} (${spellsPerDayString || "-"})`;
   }
   updateBaseAbilityScore(ability: AbilityT, newScore: number | string) {
     this.baseAbilityScores[ability] = typeof newScore == "string" ? parseInt(newScore) : newScore;
@@ -193,6 +207,48 @@ export class Character {
         };
       });
   }
+  ensureCaster(): CasterInfo {
+    this.caster ??= {
+      casterLevel: 1,
+      ability: "int",
+      spontaneous: false,
+      spellLevels: [
+        {
+          baseSpellsPerDay: 1,
+          spells: [],
+          castAmount: 0,
+        },
+      ],
+    };
+    return this.caster;
+  }
+  spellLevels() {
+    const caster = this.caster;
+    if (!caster) return [];
+    const abilityMod = this.abilityScores()[caster.ability].permanentMod;
+    return caster.spellLevels.map((obj, spellLevel) => {
+      return {
+        ...obj,
+        bonusSpells: spellLevel < 1 ? 0 : Math.max(0, Math.ceil((1 + abilityMod - spellLevel) / 4)),
+      };
+    });
+  }
+  updateBaseSpellsPerDay(spellLevel: number, newAmount: number) {
+    if (!this.caster?.spellLevels[spellLevel]) return;
+    this.caster.spellLevels[spellLevel].baseSpellsPerDay = newAmount;
+  }
+  updateCastAmount(spellLevel: number, newAmount: number) {
+    if (!this.caster?.spellLevels[spellLevel]) return;
+    this.caster.spellLevels[spellLevel].castAmount = newAmount;
+  }
+  activeSpells(): Spell[] {
+    return (
+      this.caster?.spellLevels
+        .map((sl) => sl.spells)
+        .flat()
+        .filter((s) => s.active) ?? []
+    );
+  }
 
   dump(): CharacterSheetV2 {
     return {
@@ -201,8 +257,9 @@ export class Character {
       levels: this.levels,
       hitpointEvents: this.hitpointEvents,
       abilityScores: this.baseAbilityScores,
-      abilities: this.abilities,
       baseSaves: this.baseSaves,
+      abilities: this.abilities,
+      caster: this.caster,
       items: this.items,
       temporaryEffects: this.temporaryEffects,
     };
@@ -259,7 +316,12 @@ function relevantEffects(
       }
       return false;
     });
-  return [...character.abilities, ...items, ...character.temporaryEffects]
+  return [
+    ...character.abilities,
+    ...items,
+    ...character.temporaryEffects,
+    ...character.activeSpells(),
+  ]
     .filter((effect) => effect.active !== false)
     .filter(filter ?? (() => true))
     .filter((effect) => {
@@ -369,11 +431,15 @@ function getTotalEffectModifier(
 function getAbilityStats(ability: AbilityT, character: Character): SingleAbiiltyStats {
   const baseScore = character.baseAbilityScores[ability];
   const effects = relevantEffects(character);
+  const permanentEffects = relevantEffects(character, (e) => e.passive || false);
   const score = getTotalEffectModifier(ability, effects) + baseScore;
+  const permanentScore = getTotalEffectModifier(ability, permanentEffects) + baseScore;
   return {
     base: baseScore,
     score: score,
     mod: scoreToMod(score),
+    permanentScore,
+    permanentMod: scoreToMod(permanentScore)
   };
 }
 

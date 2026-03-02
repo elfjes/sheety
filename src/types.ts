@@ -32,6 +32,7 @@ export interface CharacterSheetV2 {
   abilityScores: Record<AbilityT, number>;
   abilities: Effect[];
   baseSaves: Record<SaveT, number>;
+  caster?: CasterInfo;
   items: Item[];
   temporaryEffects: Effect[];
 }
@@ -58,6 +59,8 @@ export enum EffectKind {
   RACIAL = "racial",
   OTHER = "other",
 }
+// Note: after addting (optional) keys to the Effect interface,
+// make sure to update the ``updateKind`` function in EffectEdit.vue accordingly
 export interface Effect {
   name: string;
   description?: string;
@@ -67,6 +70,7 @@ export interface Effect {
   active?: boolean;
   passive?: boolean;
   usages?: Usage;
+  duration?: Duration;
 }
 export interface Weapon extends Effect {
   kind: EffectKind.WEAPON;
@@ -87,6 +91,22 @@ export interface Feat extends Effect {
   kind: EffectKind.FEAT;
 }
 
+export interface Spell extends Effect {
+  kind: EffectKind.SPELL;
+}
+
+export interface CasterInfo {
+  ability: AbilityT;
+  casterLevel: number;
+  spontaneous: boolean;
+  spellLevels: SpellLevel[];
+}
+
+export interface SpellLevel {
+  baseSpellsPerDay: number;
+  spells: Spell[];
+  castAmount: number;
+}
 export const NumericEffectTarget = {
   HP: "hp",
   SAVES: "saves",
@@ -103,7 +123,7 @@ export const NumericEffectTarget = {
 
 export const TextEffectTarget = {
   DAMAGE_DIE: "damageDie",
-  FULL_ATTACK: "fullAttack"
+  FULL_ATTACK: "fullAttack",
 } as const;
 export type NumericEffectTargetT =
   | (typeof NumericEffectTarget)[keyof typeof NumericEffectTarget]
@@ -112,8 +132,20 @@ export type NumericEffectTargetT =
 export type TextEffectTargetT = (typeof TextEffectTarget)[keyof typeof TextEffectTarget];
 export type EffectTarget = AbilityT | SaveT | NumericEffectTargetT | TextEffectTargetT;
 export interface Usage {
-  max: number,
-  current: number,
+  max: number;
+  current: number;
+}
+
+export const DurationUnit = {
+  ROUNDS: "rounds",
+  MINUTES: "minutes",
+  HOURS: "hours",
+  DAYS: "days",
+} as const;
+export type DurationUnitT = (typeof DurationUnit)[keyof typeof DurationUnit];
+
+export interface Duration extends Usage {
+  unit: DurationUnitT;
 }
 export interface BaseEffectDetails {
   target: EffectTarget;
@@ -154,7 +186,7 @@ export interface Action {
   title: string;
   event: string;
   color?: string;
-  confirm?: boolean
+  confirm?: boolean;
 }
 export interface SingleSaveStats {
   base: number;
@@ -167,5 +199,7 @@ export interface SingleAbiiltyStats {
   base: number;
   score: number;
   mod: number;
+  permanentScore: number;
+  permanentMod: number;
 }
 export type AbilityStats = Record<AbilityT, SingleAbiiltyStats>;

@@ -2,7 +2,7 @@ import { createPinia, setActivePinia } from "pinia";
 import { beforeEach, describe, expect, test } from "vitest";
 
 import { Character } from "@/character";
-import { EffectKind } from "@/types";
+import { type CasterInfo, EffectKind, type Spell, type SpellLevel } from "@/types";
 
 import { useCharacterStore } from "./character";
 
@@ -12,6 +12,46 @@ function defaultStore(): ReturnType<typeof useCharacterStore> & { character: Cha
   store.activateCharacter(0);
   return store as ReturnType<typeof useCharacterStore> & { character: Character };
 }
+describe("Character Store ability modifiers", () => {
+  beforeEach(() => {
+    setActivePinia(createPinia());
+  });
+  test("Calculates temporary and passive ability modifier", () => {
+    const store = defaultStore();
+    store.character.items.push(
+      {
+        name: "Belt of giant strength +2",
+        kind: EffectKind.OTHER_ITEM,
+        active: true,
+        details: [
+          {
+            target: "str",
+            effectType: "morale",
+            modifier: 2,
+          },
+        ],
+      },
+      {
+        name: "Belt of giant strength +2",
+        kind: EffectKind.OTHER_ITEM,
+        passive: true,
+        details: [
+          {
+            target: "str",
+            effectType: "enhancement",
+            modifier: 2,
+          },
+        ],
+      },
+    );
+    expect(store.abilityScores.str).toEqual({
+      base: 10,
+      score: 14,
+      mod: 2,
+      permanentMod: 1,
+    });
+  });
+});
 describe("Character Store AC", () => {
   beforeEach(() => {
     setActivePinia(createPinia());
@@ -441,6 +481,111 @@ describe("Full attack effects", () => {
     });
     expect(store.attacks[0]?.attack).toEqual(6);
     expect(store.attacks[0]?.fullAttack).toEqual([7]);
+  });
+});
+describe("Caster tests", () => {
+  function defaultCaster(): CasterInfo {
+    return {
+      casterLevel: 1,
+      spontaneous: false,
+      spellLevels: [],
+      ability: "int",
+    };
+  }
+  function newSpell(name: string, active: boolean): Spell {
+    return {
+      kind: EffectKind.SPELL,
+      name,
+      active,
+      details: [],
+    };
+  }
+  function newSpellLevel(spells: Spell[]): SpellLevel {
+    return {
+      baseSpellsPerDay: 1,
+      castAmount: 0,
+      spells,
+    };
+  }
+  beforeEach(() => {
+    setActivePinia(createPinia());
+  });
+  test("activeSpells empty when no caster", () => {
+    const store = defaultStore();
+    expect(store.activeSpells).toHaveLength(0);
+  });
+  test("activeSpells empty when no spells", () => {
+    const store = defaultStore();
+    store.character.caster = defaultCaster();
+    expect(store.activeSpells).toHaveLength(0);
+  });
+  test("activeSpells have active spells but no inactive", () => {
+    const store = defaultStore();
+    store.character.caster = {
+      ...defaultCaster(),
+      spellLevels: [
+        newSpellLevel([newSpell("spell1", true)]),
+        newSpellLevel([newSpell("spell2", false)]),
+        newSpellLevel([newSpell("spell3", true)]),
+      ],
+    };
+    expect(store.activeSpells.map((s) => s.name)).toEqual(["spell1", "spell3"]);
+  });
+  test.each([
+    [10, [0, 0, 0, 0, 0]],
+    [12, [0, 1, 0, 0, 0]],
+    [14, [0, 1, 1, 0, 0]],
+    [16, [0, 1, 1, 1, 0]],
+    [18, [0, 1, 1, 1, 1]],
+    [20, [0, 2, 1, 1, 1]],
+  ])("bonus spells are calculated", (abilityScore, expected) => {
+    const store = defaultStore();
+    store.character.caster = {
+      ...defaultCaster(),
+      spellLevels: [
+        newSpellLevel([]),
+        newSpellLevel([]),
+        newSpellLevel([]),
+        newSpellLevel([]),
+        newSpellLevel([]),
+      ],
+    };
+    store.character.updateBaseAbilityScore(store.character.caster.ability, abilityScore);
+    expect(store.character.spellLevels().map((s) => s.bonusSpells)).toEqual(expected);
+  });
+  test("Only uses permanent modifiers for bonus spells", () => {
+    const store = defaultStore();
+    store.character.caster = {
+      ...defaultCaster(),
+      spellLevels: [newSpellLevel([]), newSpellLevel([])],
+    };
+    store.character.items.push(
+      {
+        name: "Headband of intellect +8",
+        kind: EffectKind.OTHER_ITEM,
+        active: true,
+        details: [
+          {
+            target: "int",
+            effectType: "enhancement",
+            modifier: 8,
+          },
+        ],
+      },
+      {
+        name: "Fox cunning",
+        kind: EffectKind.OTHER_ITEM,
+        passive: true,
+        details: [
+          {
+            target: "int",
+            effectType: "morale",
+            modifier: 2,
+          },
+        ],
+      },
+    );
+    expect(store.character.spellLevels()[1]?.bonusSpells).toEqual(1);
   });
 });
 describe("Store character management", () => {

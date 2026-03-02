@@ -1,4 +1,4 @@
-import type { ApplicationDataV3, CharacterSheetV1, CharacterSheetV2, Effect } from "./types";
+import type { ApplicationDataV3, CharacterSheetV1, CharacterSheetV2, Effect, Item } from "./types";
 
 export function migrateApplicationData(data: unknown): ApplicationDataV3 | null {
   const result = migrateApplicationDataV3(data);
@@ -6,6 +6,7 @@ export function migrateApplicationData(data: unknown): ApplicationDataV3 | null 
   for (const character of result.characters) {
     for (const item of character.items) {
       migrateExtraAttackEffectInPlace(item);
+      itemsArePassiveByDefault(item);
     }
     for (const ability of character.abilities) {
       migrateExtraAttackEffectInPlace(ability);
@@ -26,6 +27,9 @@ function migrateExtraAttackEffectInPlace(effect: Effect) {
       };
     }
   }
+}
+function itemsArePassiveByDefault(item: Item) {
+  item.passive ??= true;
 }
 function migrateApplicationDataV3(data: unknown): ApplicationDataV3 | null {
   if (isApplicationDataV3(data)) return data;

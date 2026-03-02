@@ -5,7 +5,7 @@ import { computed, ref } from "vue";
 import Card from "@/components/Card.vue";
 import NumberInput from "@/components/NumberInput.vue";
 import { useCharacterStore } from "@/stores/character";
-import { Ability, type CharacterLevel, Save } from "@/types";
+import { Ability, type AbilityT, type CharacterLevel, Save } from "@/types";
 import { signedInt } from "@/utils";
 
 const store = useCharacterStore();
@@ -32,6 +32,15 @@ function defaultLevel(): CharacterLevel {
 }
 function newLevel() {
   character.value?.levels.push(defaultLevel());
+}
+function temporaryScoreClass(ability: AbilityT) {
+  const abilityScore = abilityScores.value[ability];
+  return abilityScore.score !== abilityScore.permanentScore ? "font-bold" : "opacity-50";
+}
+function permanentScoreClass(ability: AbilityT) {
+  const abilityScore = abilityScores.value[ability];
+  if (abilityScore.permanentScore === abilityScore.base) return "";
+  return abilityScore.permanentScore === abilityScore.score ? "font-bold" : "opacity-50";
 }
 </script>
 <template>
@@ -93,22 +102,33 @@ function newLevel() {
       <template #header>
         <h2 class="text-lg font-bold">Ability Scores</h2>
       </template>
-      <div class="flex flex-col gap-1">
-        <div v-for="ability in Ability" class="flex gap-1 items-center">
-          <div class="w-16 text-right">{{ ability.toUpperCase() }}:</div>
+      <div
+        class="grid grid-cols-[max-content_max-content_repeat(4,auto)] pl-3 gap-y-1 max-w-100 justify-start"
+      >
+        <div class="col-span-2"></div>
+        <div class="flex items-end justify-center col-span-2 text-sm">ADJ</div>
+        <div class="flex items-end justify-center col-span-2 text-sm">TEMP</div>
+        <template v-for="ability in Ability">
+          <div class="flex items-center justify-end mr-3">{{ ability.toUpperCase() }}:</div>
           <NumberInput
+            class="mr-3"
             type="number"
             :model-value="abilityScores[ability].base"
             @update:model-value="(val) => store.updateBaseAbilityScore(ability, val)"
           />
-          <div
-            class="w-8 text-right"
-            :class="abilityScores[ability].score !== abilityScores[ability].base && 'font-bold'"
-          >
+          <div class="flex items-center justify-end mr-1" :class="permanentScoreClass(ability)">
+            {{ abilityScores[ability].permanentScore }}
+          </div>
+          <div class="flex items-center justify-end mr-3" :class="permanentScoreClass(ability)">
+            ({{ signedInt(abilityScores[ability].permanentMod) }})
+          </div>
+          <div class="flex items-center justify-end mr-1" :class="temporaryScoreClass(ability)">
             {{ abilityScores[ability].score }}
           </div>
-          <input disabled class="w-8 text-right" :value="signedInt(abilityScores[ability].mod)" />
-        </div>
+          <div class="flex items-center justify-end" :class="temporaryScoreClass(ability)">
+            ({{ signedInt(abilityScores[ability].mod) }})
+          </div>
+        </template>
       </div>
     </Card>
 

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { computed } from "vue";
+
 import { signedInt } from "@/utils.ts";
 import { hasOwnProperty } from "@/utils.ts";
 
@@ -18,6 +20,7 @@ const {
   toggle = false,
   open = false,
   usageSlider = false,
+  durationSlider = false,
 } = defineProps<{
   effect: Effect;
   allowedKinds?: EffectKind[];
@@ -25,12 +28,16 @@ const {
   toggle?: boolean;
   open?: boolean;
   usageSlider?: boolean;
+  durationSlider?: boolean;
 }>();
 
 const emit = defineEmits<{
   (e: "edit"): void;
   (e: "update:open", val: boolean): void;
 }>();
+
+const usageSliderActive = computed(() => usageSlider && effect.usages);
+const durationSliderActive = computed(() => durationSlider && effect.active && effect.duration);
 </script>
 <template>
   <Card :open="open" @update:open="(e) => emit('update:open', e)" collapse>
@@ -53,17 +60,30 @@ const emit = defineEmits<{
       </div>
     </template>
 
-    <template #sub-header v-if="usageSlider && effect.usages">
-      <Slider
-        v-model="effect.usages.current"
-        :max-val="effect.usages.max"
-        :compact-ticks="effect.usages.max > 10"
-      />
-    </template>
-    <div class="flex flex-col gap-1 max-w-100">
-      <template v-if="effect.usages">
-        <div>Max usages: {{ effect.usages.max }}</div>
+    <template #sub-header v-if="usageSliderActive || durationSliderActive">
+      <template v-if="durationSliderActive && effect.duration">
+        <div class="text-sm italic">Duration ({{ effect.duration.unit }}):</div>
+        <Slider
+          class="flex-grow"
+          v-model="effect.duration!.current"
+          :max-val="effect.duration.max"
+          :compact-ticks="effect.duration.max > 10"
+        />
       </template>
+
+      <template v-if="usageSliderActive && effect.usages">
+        <div class="text-sm italic">Usages:</div>
+        <Slider
+          v-model="effect.usages.current"
+          :max-val="effect.usages.max"
+          :compact-ticks="effect.usages.max > 10"
+        />
+      </template>
+    </template>
+
+    <div class="flex flex-col gap-1 max-w-100">
+      <div v-if="effect.usages">Max usages: {{ effect.usages.max }}</div>
+      <div v-if="effect.duration">Duration: {{ effect.duration.max }} {{effect.duration.unit}}</div>
       <slot></slot>
       <template v-for="details in effect.details">
         <div class="flex flex-row gap-1">
