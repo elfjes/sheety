@@ -99,10 +99,14 @@ export interface CasterInfo {
   ability: AbilityT;
   casterLevel: number;
   spontaneous: boolean;
-  baseSpellsPerDay: number[];
-  spells: Spell[][];
+  spellLevels: SpellLevel[];
 }
 
+export interface SpellLevel {
+  baseSpellsPerDay: number;
+  spells: Spell[];
+  castAmount: number;
+}
 export const NumericEffectTarget = {
   HP: "hp",
   SAVES: "saves",
@@ -195,5 +199,7 @@ export interface SingleAbiiltyStats {
   base: number;
   score: number;
   mod: number;
+  permanentScore: number;
+  permanentMod: number;
 }
 export type AbilityStats = Record<AbilityT, SingleAbiiltyStats>;

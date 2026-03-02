@@ -66,8 +66,10 @@ export class Character {
   }
   casterString() {
     if (!this.caster) return "";
-    const spellsPerDayString = this.spellsPerDay()
-      .map((spd) => (spd.base + spd.bonus ? spd.base + spd.bonus : "-"))
+    const spellsPerDayString = this.spellLevels()
+      .map((spd) =>
+        spd.baseSpellsPerDay !== null ? spd.baseSpellsPerDay + spd.bonusSpells || "-" : "*",
+      )
       .join("/");
     return `Caster level ${this.caster.casterLevel} (${spellsPerDayString || "-"})`;
   }
@@ -205,23 +207,47 @@ export class Character {
         };
       });
   }
-  spellsPerDay() {
+  ensureCaster(): CasterInfo {
+    this.caster ??= {
+      casterLevel: 1,
+      ability: "int",
+      spontaneous: false,
+      spellLevels: [
+        {
+          baseSpellsPerDay: 1,
+          spells: [],
+          castAmount: 0,
+        },
+      ],
+    };
+    return this.caster;
+  }
+  spellLevels() {
     const caster = this.caster;
     if (!caster) return [];
-    const abilityMod = this.abilityScores()[caster.ability].mod;
-    return caster.baseSpellsPerDay.map((n, spellLevel) => {
+    const abilityMod = this.abilityScores()[caster.ability].permanentMod;
+    return caster.spellLevels.map((obj, spellLevel) => {
       return {
-        base: n,
-        bonus: spellLevel < 1 ? 0 : Math.max(0, Math.ceil((1 + abilityMod - spellLevel) / 4)),
+        ...obj,
+        bonusSpells: spellLevel < 1 ? 0 : Math.max(0, Math.ceil((1 + abilityMod - spellLevel) / 4)),
       };
     });
   }
   updateBaseSpellsPerDay(spellLevel: number, newAmount: number) {
-    if (!this.caster) return;
-    this.caster.baseSpellsPerDay[spellLevel] = newAmount;
+    if (!this.caster?.spellLevels[spellLevel]) return;
+    this.caster.spellLevels[spellLevel].baseSpellsPerDay = newAmount;
+  }
+  updateCastAmount(spellLevel: number, newAmount: number) {
+    if (!this.caster?.spellLevels[spellLevel]) return;
+    this.caster.spellLevels[spellLevel].castAmount = newAmount;
   }
   activeSpells(): Spell[] {
-    return this.caster?.spells.flat().filter((s) => s.active) || [];
+    return (
+      this.caster?.spellLevels
+        .map((sl) => sl.spells)
+        .flat()
+        .filter((s) => s.active) ?? []
+    );
   }
 
   dump(): CharacterSheetV2 {
@@ -405,11 +431,15 @@ function getTotalEffectModifier(
 function getAbilityStats(ability: AbilityT, character: Character): SingleAbiiltyStats {
   const baseScore = character.baseAbilityScores[ability];
   const effects = relevantEffects(character);
+  const permanentEffects = relevantEffects(character, (e) => e.passive || false);
   const score = getTotalEffectModifier(ability, effects) + baseScore;
+  const permanentScore = getTotalEffectModifier(ability, permanentEffects) + baseScore;
   return {
     base: baseScore,
     score: score,
     mod: scoreToMod(score),
+    permanentScore,
+    permanentMod: scoreToMod(permanentScore)
   };
 }
 

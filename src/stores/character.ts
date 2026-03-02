@@ -148,10 +148,15 @@ export const useCharacterStore = defineStore("character", () => {
   const activeSpells = computed((): Spell[] =>
     (activeCharacter.value ?? new Character()).activeSpells(),
   );
-  const spellsPerDay = computed(() => (activeCharacter.value ?? new Character()).spellsPerDay());
+  const spellLevels = computed(() => (activeCharacter.value ?? new Character()).spellLevels());
   function updateBaseSpellsPerDay(spellLevel: number, newAmount: number) {
     if (!activeCharacter.value) return;
     activeCharacter.value.updateBaseSpellsPerDay(spellLevel, newAmount);
+  }
+
+  function updateCastAmount(spellLevel: number, newAmount: number) {
+    if (!activeCharacter.value) return;
+    activeCharacter.value.updateCastAmount(spellLevel, newAmount);
   }
   watch(
     [characters, () => unref(activeCharacterIndex)],
@@ -182,8 +187,9 @@ export const useCharacterStore = defineStore("character", () => {
     ac,
     attacks,
     activeSpells,
-    spellsPerDay,
+    spellLevels,
     updateBaseSpellsPerDay,
+    updateCastAmount,
     importCharacter,
     activateCharacter,
     characterAsExport,
